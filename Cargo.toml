@@ -1,0 +1,9 @@
+[package]
+name = "res_errare"
+version = "0.1.0"
+authors = ["LambdAurora <aurora42lambda@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+gl = "0.14.0"
+glfw = "0.41.0"
