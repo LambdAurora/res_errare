@@ -1,8 +1,10 @@
 extern crate gl;
 
-use glfw::WindowMode;
-
 pub mod game;
+use game::graphics;
+
+use std::path::Path;
+use glfw::WindowMode;
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -13,6 +15,9 @@ fn main() {
     window.make_current();
 
     gl::load_with(|symbol| glfw.get_proc_address_raw(symbol) as *const _);
+
+    let mut shader = graphics::Shader::load(Path::new("shaders/shader.vsh"), Path::new("shaders/shader.fsh"))
+        .expect("Could not create shader program.");
 
     while !window.should_close() {
         unsafe {
@@ -28,4 +33,6 @@ fn main() {
             }
         }
     }
+
+    shader.delete();
 }

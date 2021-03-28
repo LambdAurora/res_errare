@@ -2,6 +2,7 @@ extern crate glfw;
 
 pub use glfw::{Glfw, Context, WindowMode};
 
+pub mod graphics;
 pub mod window;
 pub use window::Window;
 

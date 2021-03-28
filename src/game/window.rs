@@ -3,7 +3,6 @@ extern crate glfw;
 pub use std::sync::mpsc::Receiver;
 
 pub use glfw::{Context, WindowEvent};
-use glfw::WindowMode;
 
 pub struct Window {
     pub handle: glfw::Window,
