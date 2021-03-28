@@ -29,9 +29,11 @@ impl Shader {
         let mut fragment_shader_src = String::new();
 
         File::open(vertex_shader).map(|mut v| v.read_to_string(&mut vertex_shader_src))
-            .and(File::open(fragment_shader)).map(|mut f| f.read_to_string(&mut fragment_shader_src))
-            .map_err(|err| err.to_string())
-            .and(Shader::new(&vertex_shader_src[..], &fragment_shader_src[..]))
+            .map_err(|err| err.to_string())?;
+        File::open(fragment_shader).map(|mut f| f.read_to_string(&mut fragment_shader_src))
+            .map_err(|err| err.to_string())?;
+
+        Shader::new(&vertex_shader_src[..], &fragment_shader_src[..])
     }
 
     pub fn use_program(&mut self)

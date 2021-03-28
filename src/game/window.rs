@@ -45,5 +45,11 @@ impl Window {
 }
 
 pub fn new(glfw_ctx: &glfw::Glfw, width: u32, height: u32, title: &str, mode: glfw::WindowMode) -> Option<Window> {
-    glfw_ctx.create_window(width, height, title, mode).map(|win| Window { handle: win.0, events: win.1 })
+    glfw_ctx.create_window(width, height, title, mode)
+        .map(|win| Window { handle: win.0, events: win.1 })
+        .map(|mut w| {
+            w.handle.set_key_polling(true);
+            w.handle.set_framebuffer_size_polling(true);
+            w
+        })
 }
