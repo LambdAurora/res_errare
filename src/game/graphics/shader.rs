@@ -56,25 +56,14 @@ impl Shader {
 /// Loads a shader program using the given vertex and fragment shader sources
 pub fn new_shader_program(vertex_shader_src: &str, fragment_shader_src: &str) -> Result<GLuint, String>
 {
-    let vertex_shader = create_vertex_shader(vertex_shader_src);
-    let fragment_shader = create_fragment_shader(fragment_shader_src);
+    let vertex_shader = create_vertex_shader(vertex_shader_src)?;
+    let fragment_shader = create_fragment_shader(fragment_shader_src)?;
 
-    if !vertex_shader.is_ok() {
-        return Err(vertex_shader.err().unwrap());
-    }
-
-    if !fragment_shader.is_ok() {
-        return Err(fragment_shader.err().unwrap());
-    }
-
-    let vertex_shader_id = vertex_shader.unwrap();
-    let fragment_shader_id = fragment_shader.unwrap();
-
-    let program = create_program(vertex_shader_id, fragment_shader_id);
+    let program = create_program(vertex_shader, fragment_shader);
 
     unsafe {
-        gl::DeleteShader(vertex_shader_id);
-        gl::DeleteShader(fragment_shader_id);
+        gl::DeleteShader(vertex_shader);
+        gl::DeleteShader(fragment_shader);
     }
 
     program
