@@ -129,10 +129,17 @@ impl Shader {
         }
     }
 
-    pub fn set_mat4(&mut self, name: &str, value: &cgmath::Matrix4<f32>) {
+    pub fn set_mat4f(&mut self, name: &str, value: &cgmath::Matrix4<f32>) {
         let uniform = self.get_uniform_location(name);
         if uniform != -1 {
             unsafe { gl::UniformMatrix4fv(uniform, 1, gl::FALSE, value.as_ptr()); }
+        }
+    }
+
+    pub fn set_mat4d(&mut self, name: &str, value: &cgmath::Matrix4<f64>) {
+        let uniform = self.get_uniform_location(name);
+        if uniform != -1 {
+            unsafe { gl::UniformMatrix4dv(uniform, 1, gl::FALSE, value.as_ptr()); }
         }
     }
 
