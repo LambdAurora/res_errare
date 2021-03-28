@@ -1,3 +1,4 @@
+extern crate cgmath;
 extern crate gl;
 
 use std::ffi::CString;
@@ -7,6 +8,8 @@ use std::iter::repeat;
 use std::result::*;
 
 use gl::types::*;
+
+use self::cgmath::Matrix;
 
 /**
  * Represents a shader program.
@@ -20,7 +23,15 @@ impl Shader {
      * Creates a new shader program given the vertex shader source and the fragment shader source.
      */
     pub fn new(vertex_shader: &str, fragment_shader: &str) -> Result<Shader, String> {
-        new_shader_program(vertex_shader, fragment_shader)
+        new_shader_program(vertex_shader, fragment_shader, None)
+            .map(|shader| Shader { program: shader })
+    }
+
+    /**
+    * Creates a new shader program given the vertex shader source, the fragment shader source and the geometry shader source.
+    */
+    pub fn new_with_geometry(vertex_shader: &str, fragment_shader: &str, geometry_shader: &str) -> Result<Shader, String> {
+        new_shader_program(vertex_shader, fragment_shader, Some(geometry_shader))
             .map(|shader| Shader { program: shader })
     }
 
@@ -28,22 +39,101 @@ impl Shader {
         let mut vertex_shader_src = String::new();
         let mut fragment_shader_src = String::new();
 
-        File::open(vertex_shader).map(|mut v| v.read_to_string(&mut vertex_shader_src))
+        File::open(vertex_shader).and_then(|mut v| v.read_to_string(&mut vertex_shader_src))
             .map_err(|err| err.to_string())?;
-        File::open(fragment_shader).map(|mut f| f.read_to_string(&mut fragment_shader_src))
+        File::open(fragment_shader).and_then(|mut f| f.read_to_string(&mut fragment_shader_src))
             .map_err(|err| err.to_string())?;
 
         Shader::new(&vertex_shader_src[..], &fragment_shader_src[..])
+    }
+
+    pub fn load_with_geometry(vertex_shader: &std::path::Path, fragment_shader: &std::path::Path, geometry_shader: &std::path::Path) -> Result<Shader, String> {
+        let mut vertex_shader_src = String::new();
+        let mut fragment_shader_src = String::new();
+        let mut geometry_shader_src = String::new();
+
+        File::open(vertex_shader).and_then(|mut v| v.read_to_string(&mut vertex_shader_src))
+            .map_err(|err| err.to_string())?;
+        File::open(fragment_shader).and_then(|mut f| f.read_to_string(&mut fragment_shader_src))
+            .map_err(|err| err.to_string())?;
+        File::open(geometry_shader).and_then(|mut f| f.read_to_string(&mut geometry_shader_src))
+            .map_err(|err| err.to_string())?;
+
+
+        Shader::new_with_geometry(&vertex_shader_src[..], &fragment_shader_src[..], &geometry_shader_src[..])
     }
 
     pub fn use_program(&mut self)
     {
         unsafe {
             gl::UseProgram(self.program);
-            let out_color = CString::new("out_color".as_bytes());
-            gl::BindFragDataLocation(self.program, 0, out_color.unwrap().as_ptr());
         }
-        //self.bind_pos_attr();
+    }
+
+    pub fn get_uniform_location(&mut self, uniform: &str) -> i32
+    {
+        let name = CString::new(uniform.as_bytes()).expect("CString::new failed.");
+        let ptr = name.as_ptr();
+        let uniform_location = unsafe { gl::GetUniformLocation(self.program, ptr) };
+
+        match uniform_location
+        {
+            -1 => {
+                // uniform not found
+                println!("Uniform {} not found!!", uniform);
+                uniform_location
+            }
+            _ => { uniform_location }
+        }
+    }
+
+    pub fn set_bool(&mut self, name: &str, value: bool) {
+        let uniform = self.get_uniform_location(name);
+        if uniform != -1 {
+            unsafe { gl::Uniform1i(uniform, value as i32); }
+        }
+    }
+
+    pub fn set_i32(&mut self, name: &str, value: i32) {
+        let uniform = self.get_uniform_location(name);
+        if uniform != -1 {
+            unsafe { gl::Uniform1i(uniform, value); }
+        }
+    }
+
+    pub fn set_float(&mut self, name: &str, value: f32) {
+        let uniform = self.get_uniform_location(name);
+        if uniform != -1 {
+            unsafe { gl::Uniform1f(uniform, value); }
+        }
+    }
+
+    pub fn set_vec2f(&mut self, name: &str, value: &cgmath::Vector2<f32>) {
+        let uniform = self.get_uniform_location(name);
+        if uniform != -1 {
+            unsafe { gl::Uniform2f(uniform, value.x, value.y); }
+        }
+    }
+
+    pub fn set_vec3f(&mut self, name: &str, value: &cgmath::Vector3<f32>) {
+        let uniform = self.get_uniform_location(name);
+        if uniform != -1 {
+            unsafe { gl::Uniform3f(uniform, value.x, value.y, value.z); }
+        }
+    }
+
+    pub fn set_vec4f(&mut self, name: &str, value: &cgmath::Vector4<f32>) {
+        let uniform = self.get_uniform_location(name);
+        if uniform != -1 {
+            unsafe { gl::Uniform4f(uniform, value.x, value.y, value.z, value.w); }
+        }
+    }
+
+    pub fn set_mat4(&mut self, name: &str, value: &cgmath::Matrix4<f32>) {
+        let uniform = self.get_uniform_location(name);
+        if uniform != -1 {
+            unsafe { gl::UniformMatrix4fv(uniform, 1, gl::FALSE, value.as_ptr()); }
+        }
     }
 
     pub fn delete(&mut self) {
@@ -54,12 +144,17 @@ impl Shader {
 }
 
 /// Loads a shader program using the given vertex and fragment shader sources
-pub fn new_shader_program(vertex_shader_src: &str, fragment_shader_src: &str) -> Result<GLuint, String>
+pub fn new_shader_program(vertex_shader_src: &str, fragment_shader_src: &str, geometry_shader_src: Option<&str>) -> Result<GLuint, String>
 {
     let vertex_shader = create_vertex_shader(vertex_shader_src)?;
     let fragment_shader = create_fragment_shader(fragment_shader_src)?;
+    let geometry_shader: Option<GLuint> = match geometry_shader_src
+        .map(|src| create_geometry_shader(src)) {
+        None => None,
+        Some(res) => Some(res?)
+    };
 
-    let program = create_program(vertex_shader, fragment_shader);
+    let program = create_program(vertex_shader, fragment_shader, geometry_shader);
 
     unsafe {
         gl::DeleteShader(vertex_shader);
@@ -71,8 +166,7 @@ pub fn new_shader_program(vertex_shader_src: &str, fragment_shader_src: &str) ->
 
 pub fn create_vertex_shader(vertex_shader_src: &str) -> Result<GLuint, String>
 {
-    let vertex_shader: GLuint;
-    unsafe { vertex_shader = gl::CreateShader(gl::VERTEX_SHADER); }
+    let vertex_shader = unsafe { gl::CreateShader(gl::VERTEX_SHADER) };
     if vertex_shader == 0 {
         return Err(String::from("Could not create vertex shader."));
     }
@@ -88,8 +182,7 @@ pub fn create_vertex_shader(vertex_shader_src: &str) -> Result<GLuint, String>
 
 pub fn create_fragment_shader(fragment_shader_src: &str) -> Result<GLuint, String>
 {
-    let fragment_shader: GLuint;
-    unsafe { fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER); }
+    let fragment_shader = unsafe { gl::CreateShader(gl::FRAGMENT_SHADER) };
     if fragment_shader == 0 {
         return Err(String::from("Could not create fragment shader."));
     }
@@ -104,10 +197,26 @@ pub fn create_fragment_shader(fragment_shader_src: &str) -> Result<GLuint, Strin
     check_shader_error(fragment_shader)
 }
 
-pub fn create_program(vertex_shader: GLuint, fragment_shader: GLuint) -> Result<GLuint, String>
+pub fn create_geometry_shader(geometry_shader_src: &str) -> Result<GLuint, String>
 {
-    let program: GLuint;
-    unsafe { program = gl::CreateProgram(); }
+    let geometry_shader = unsafe { gl::CreateShader(gl::GEOMETRY_SHADER) };
+    if geometry_shader == 0 {
+        return Err(String::from("Could not create geometry shader."));
+    }
+
+    let geometry_shader_str = CString::new(geometry_shader_src.as_bytes()).unwrap();
+
+    unsafe {
+        gl::ShaderSource(geometry_shader, 1, &geometry_shader_str.as_ptr(), std::ptr::null());
+        gl::CompileShader(geometry_shader);
+    }
+
+    check_shader_error(geometry_shader)
+}
+
+pub fn create_program(vertex_shader: GLuint, fragment_shader: GLuint, geometry_shader: Option<GLuint>) -> Result<GLuint, String>
+{
+    let program = unsafe { gl::CreateProgram() };
     if program == 0 {
         return Err(String::from("Could not create shader program."));
     }
@@ -115,6 +224,10 @@ pub fn create_program(vertex_shader: GLuint, fragment_shader: GLuint) -> Result<
     unsafe {
         gl::AttachShader(program, vertex_shader);
         gl::AttachShader(program, fragment_shader);
+        match geometry_shader {
+            None => {}
+            Some(shader) => gl::AttachShader(program, shader)
+        }
         gl::LinkProgram(program);
     }
 
