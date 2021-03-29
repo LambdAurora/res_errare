@@ -7,9 +7,10 @@ use std::io::Read;
 use std::iter::repeat;
 use std::result::*;
 
+use cgmath::Matrix;
 use gl::types::*;
 
-use self::cgmath::Matrix;
+use super::Mat4;
 
 /**
  * Represents a shader program.
@@ -25,6 +26,7 @@ impl Shader {
     pub fn new(vertex_shader: &str, fragment_shader: &str) -> Result<Shader, String> {
         new_shader_program(vertex_shader, fragment_shader, None)
             .map(|shader| Shader { program: shader })
+            .and_then(Shader::apply_block_indexes)
     }
 
     /**
@@ -33,6 +35,7 @@ impl Shader {
     pub fn new_with_geometry(vertex_shader: &str, fragment_shader: &str, geometry_shader: &str) -> Result<Shader, String> {
         new_shader_program(vertex_shader, fragment_shader, Some(geometry_shader))
             .map(|shader| Shader { program: shader })
+            .and_then(Shader::apply_block_indexes)
     }
 
     pub fn load(vertex_shader: &std::path::Path, fragment_shader: &std::path::Path) -> Result<Shader, String> {
@@ -87,6 +90,13 @@ impl Shader {
         }
     }
 
+    pub fn get_uniform_block_index(&mut self, uniform: &str) -> u32
+    {
+        let name = CString::new(uniform.as_bytes()).expect("CString::new failed.");
+        let ptr = name.as_ptr();
+        unsafe { gl::GetUniformBlockIndex(self.program, ptr) }
+    }
+
     pub fn set_bool(&mut self, name: &str, value: bool) {
         let uniform = self.get_uniform_location(name);
         if uniform != -1 {
@@ -129,7 +139,7 @@ impl Shader {
         }
     }
 
-    pub fn set_mat4f(&mut self, name: &str, value: &cgmath::Matrix4<f32>) {
+    pub fn set_mat4f(&mut self, name: &str, value: &Mat4) {
         let uniform = self.get_uniform_location(name);
         if uniform != -1 {
             unsafe { gl::UniformMatrix4fv(uniform, 1, gl::FALSE, value.as_ptr()); }
@@ -147,6 +157,16 @@ impl Shader {
         unsafe {
             gl::DeleteProgram(self.program);
         }
+    }
+
+    fn apply_block_indexes(shader: Shader) -> Result<Shader, String> {
+        let mut shader = shader;
+        let uniform_block_index = shader.get_uniform_block_index("matrices");
+        unsafe {
+            gl::UniformBlockBinding(shader.program.into(), uniform_block_index, 0);
+        }
+
+        Ok(shader)
     }
 }
 

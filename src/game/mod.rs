@@ -5,8 +5,10 @@ use std::path::Path;
 use cgmath::*;
 pub use glfw::{Context, Glfw, WindowMode};
 
+use graphics::Mat4;
 pub use renderer::GameRenderer;
 pub use window::Window;
+
 use self::glfw::Action;
 
 pub mod graphics;
@@ -52,30 +54,30 @@ impl Client {
             let (width, height) = self.window.handle.get_framebuffer_size();
             self.renderer.setup_projection(width, height);
             shader.use_program();
-            shader.set_mat4f("projection", &self.renderer.projection);
         }
 
         let mut wireframe = false;
 
         while self.running {
+            let view: Mat4 = Mat4::from_translation(vec3(0., 0., -3.));
+            self.renderer.update_view(view);
+
             unsafe {
                 gl::ClearColor(0.0, 0.0, 0.0, 1.0);
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
                 shader.use_program();
-                let model: Matrix4<f32> = Matrix4::from_axis_angle(vec3(0.5, 1.0, 0.6).normalize(),
-                                                                   Rad(self.glfw.get_time() as f32));
-                let view: Matrix4<f32> = Matrix4::from_translation(vec3(0., 0., -3.));
+                let model: Mat4 = Mat4::from_axis_angle(vec3(0.5, 1.0, 0.6).normalize(),
+                                                        Rad(self.glfw.get_time() as f32));
                 shader.set_mat4f("model", &model);
-                shader.set_mat4f("view", &view);
 
                 gl::Enable(gl::DEPTH_TEST);
             }
             for (i, position) in cube_positions.iter().enumerate() {
                 // calculate the model matrix for each object and pass it to shader before drawing
-                let mut model: Matrix4<f32> = Matrix4::from_translation(*position);
+                let mut model: Mat4 = Mat4::from_translation(*position);
                 let angle = 20.0 * (i + 1) as f32;
-                model = model * Matrix4::from_axis_angle(vec3(1.0, 0.3, 0.5).normalize(), Deg(angle) * self.glfw.get_time() as f32);
+                model = model * Mat4::from_axis_angle(vec3(1.0, 0.3, 0.5).normalize(), Deg(angle) * self.glfw.get_time() as f32);
                 shader.set_mat4f("model", &model);
 
                 brazier_model.draw(&mut shader);
@@ -100,7 +102,6 @@ impl Client {
                     glfw::WindowEvent::FramebufferSize(width, height) => {
                         self.renderer.setup_projection(width, height);
                         shader.use_program();
-                        shader.set_mat4f("projection", &self.renderer.projection);
                     }
                     _ => {}
                 }

@@ -7,3 +7,5 @@ pub mod shader;
 pub mod mesh;
 pub mod model;
 pub mod texture;
+
+pub type Mat4 = cgmath::Matrix4<f32>;
