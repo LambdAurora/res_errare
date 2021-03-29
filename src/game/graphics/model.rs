@@ -14,12 +14,14 @@ pub struct Model {
     pub meshes: Vec<Mesh>,
     // Stores all the textures loaded so far, optimization to make sure textures aren't loaded more than once.
     pub textures_loaded: Vec<MeshTexture>,
+    flip_texture: bool,
     directory: String,
 }
 
 impl Model {
-    pub fn new(path: &Path) -> Model {
+    pub fn new(path: &Path, flip_texture: bool) -> Model {
         let mut model = Model::default();
+        model.flip_texture = flip_texture;
         model.load_model(path);
         model
     }
@@ -92,7 +94,7 @@ impl Model {
         }
 
         let texture = MeshTexture {
-            texture: super::Texture::load(Path::new(self.directory.as_str()).join(Path::new(path)).as_path(), true)
+            texture: super::Texture::load(Path::new(self.directory.as_str()).join(Path::new(path)).as_path(), self.flip_texture)
                 .expect(format!("Missing texture {}", path).as_str()),
             texture_type: type_name.into(),
             path: path.into(),

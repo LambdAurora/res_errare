@@ -7,6 +7,7 @@ pub use glfw::{Context, Glfw, WindowMode};
 
 pub use renderer::GameRenderer;
 pub use window::Window;
+use self::glfw::Action;
 
 pub mod graphics;
 pub mod renderer;
@@ -33,68 +34,7 @@ impl Client {
         let mut shader = graphics::Shader::load(Path::new("assets/shaders/shader.vsh"), Path::new("assets/shaders/shader.fsh"))
             .expect("Could not create shader program.");
 
-        let brazier_model = graphics::Model::new(Path::new("assets/models/brazier.obj"));
-        /*let vao = unsafe {
-            let vertices: [f32; 180] = [
-                -0.5, -0.5, -0.5, 0.0, 0.0,
-                0.5, -0.5, -0.5, 1.0, 0.0,
-                0.5, 0.5, -0.5, 1.0, 1.0,
-                0.5, 0.5, -0.5, 1.0, 1.0,
-                -0.5, 0.5, -0.5, 0.0, 1.0,
-                -0.5, -0.5, -0.5, 0.0, 0.0,
-                -0.5, -0.5, 0.5, 0.0, 0.0,
-                0.5, -0.5, 0.5, 1.0, 0.0,
-                0.5, 0.5, 0.5, 1.0, 1.0,
-                0.5, 0.5, 0.5, 1.0, 1.0,
-                -0.5, 0.5, 0.5, 0.0, 1.0,
-                -0.5, -0.5, 0.5, 0.0, 0.0,
-                -0.5, 0.5, 0.5, 1.0, 0.0,
-                -0.5, 0.5, -0.5, 1.0, 1.0,
-                -0.5, -0.5, -0.5, 0.0, 1.0,
-                -0.5, -0.5, -0.5, 0.0, 1.0,
-                -0.5, -0.5, 0.5, 0.0, 0.0,
-                -0.5, 0.5, 0.5, 1.0, 0.0,
-                0.5, 0.5, 0.5, 1.0, 0.0,
-                0.5, 0.5, -0.5, 1.0, 1.0,
-                0.5, -0.5, -0.5, 0.0, 1.0,
-                0.5, -0.5, -0.5, 0.0, 1.0,
-                0.5, -0.5, 0.5, 0.0, 0.0,
-                0.5, 0.5, 0.5, 1.0, 0.0,
-                -0.5, -0.5, -0.5, 0.0, 1.0,
-                0.5, -0.5, -0.5, 1.0, 1.0,
-                0.5, -0.5, 0.5, 1.0, 0.0,
-                0.5, -0.5, 0.5, 1.0, 0.0,
-                -0.5, -0.5, 0.5, 0.0, 0.0,
-                -0.5, -0.5, -0.5, 0.0, 1.0,
-                -0.5, 0.5, -0.5, 0.0, 1.0,
-                0.5, 0.5, -0.5, 1.0, 1.0,
-                0.5, 0.5, 0.5, 1.0, 0.0,
-                0.5, 0.5, 0.5, 1.0, 0.0,
-                -0.5, 0.5, 0.5, 0.0, 0.0,
-                -0.5, 0.5, -0.5, 0.0, 1.0
-            ];
-            let (mut vbo, mut vao) = (0, 0);
-            gl::GenVertexArrays(1, &mut vao);
-            gl::GenBuffers(1, &mut vbo);
-            // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-            gl::BindVertexArray(vao);
-
-            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-            gl::BufferData(gl::ARRAY_BUFFER,
-                           (vertices.len() * std::mem::size_of::<GLfloat>()) as GLsizeiptr,
-                           &vertices[0] as *const f32 as *const c_void,
-                           gl::STATIC_DRAW);
-
-            let stride = 5 * std::mem::size_of::<GLfloat>() as GLsizei;
-            // position attribute
-            gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, std::ptr::null());
-            gl::EnableVertexAttribArray(0);
-            // texture coord attribute
-            gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, stride, (3 * std::mem::size_of::<GLfloat>()) as *const c_void);
-            gl::EnableVertexAttribArray(1);
-
-            vao
-        };
+        let brazier_model = graphics::Model::new(Path::new("assets/models/brazier.obj"), true);
 
         // world space positions of our cubes
         let cube_positions: [Vector3<f32>; 10] = [vec3(0.0, 0.0, 0.0),
@@ -106,7 +46,7 @@ impl Client {
             vec3(1.3, -2.0, -2.5),
             vec3(1.5, 2.0, -2.5),
             vec3(1.5, 0.2, -1.5),
-            vec3(-1.3, 1.0, -1.5)];*/
+            vec3(-1.3, 1.0, -1.5)];
 
         {
             let (width, height) = self.window.handle.get_framebuffer_size();
@@ -115,7 +55,7 @@ impl Client {
             shader.set_mat4f("projection", &self.renderer.projection);
         }
 
-        //unsafe { gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE); }
+        let mut wireframe = false;
 
         while self.running {
             unsafe {
@@ -130,26 +70,29 @@ impl Client {
                 shader.set_mat4f("view", &view);
 
                 gl::Enable(gl::DEPTH_TEST);
-                /*
-                gl::BindVertexArray(vao);
-                for (i, position) in cube_positions.iter().enumerate() {
-                    // calculate the model matrix for each object and pass it to shader before drawing
-                    let mut model: Matrix4<f32> = Matrix4::from_translation(*position);
-                    let angle = 20.0 * (i + 1) as f32;
-                    model = model * Matrix4::from_axis_angle(vec3(1.0, 0.3, 0.5).normalize(), Deg(angle) * self.glfw.get_time() as f32);
-                    shader.set_mat4f("model", &model);
-
-                    gl::DrawArrays(gl::TRIANGLES, 0, 36);
-                }*/
             }
-            brazier_model.draw(&mut shader);
+            for (i, position) in cube_positions.iter().enumerate() {
+                // calculate the model matrix for each object and pass it to shader before drawing
+                let mut model: Matrix4<f32> = Matrix4::from_translation(*position);
+                let angle = 20.0 * (i + 1) as f32;
+                model = model * Matrix4::from_axis_angle(vec3(1.0, 0.3, 0.5).normalize(), Deg(angle) * self.glfw.get_time() as f32);
+                shader.set_mat4f("model", &model);
+
+                brazier_model.draw(&mut shader);
+            }
 
             self.window.swap_buffers();
             self.glfw.poll_events();
             for (_, event) in glfw::flush_messages(&self.window.events) {
                 match event {
-                    glfw::WindowEvent::Key(key, _, _, _) => {
+                    glfw::WindowEvent::Key(key, _, action, _) => {
                         match key {
+                            glfw::Key::Enter => {
+                                if action == Action::Release {
+                                    wireframe = !wireframe;
+                                    unsafe { gl::PolygonMode(gl::FRONT_AND_BACK, if wireframe { gl::LINE } else { gl::FILL }); }
+                                }
+                            }
                             glfw::Key::Escape => { self.running = false; }
                             _ => {}
                         }
