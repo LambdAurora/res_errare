@@ -1,10 +1,8 @@
 extern crate glfw;
 
-use std::ffi::c_void;
 use std::path::Path;
 
 use cgmath::*;
-use gl::types::*;
 pub use glfw::{Context, Glfw, WindowMode};
 
 pub use renderer::GameRenderer;
@@ -32,12 +30,11 @@ impl Client {
     }
 
     pub fn run(&mut self) {
-        let mut shader = graphics::Shader::load(Path::new("shaders/shader.vsh"), Path::new("shaders/shader.fsh"))
+        let mut shader = graphics::Shader::load(Path::new("assets/shaders/shader.vsh"), Path::new("assets/shaders/shader.fsh"))
             .expect("Could not create shader program.");
 
-        // TODO: get a proper API for that stuff
-        // TODO: model loading
-        let vao = unsafe {
+        let brazier_model = graphics::Model::new(Path::new("assets/models/brazier.obj"));
+        /*let vao = unsafe {
             let vertices: [f32; 180] = [
                 -0.5, -0.5, -0.5, 0.0, 0.0,
                 0.5, -0.5, -0.5, 1.0, 0.0,
@@ -109,7 +106,7 @@ impl Client {
             vec3(1.3, -2.0, -2.5),
             vec3(1.5, 2.0, -2.5),
             vec3(1.5, 0.2, -1.5),
-            vec3(-1.3, 1.0, -1.5)];
+            vec3(-1.3, 1.0, -1.5)];*/
 
         {
             let (width, height) = self.window.handle.get_framebuffer_size();
@@ -126,13 +123,14 @@ impl Client {
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
                 shader.use_program();
-                let model: Matrix4<f32> = Matrix4::from_axis_angle(vec3(0.5, 1.0, 0.0).normalize(),
+                let model: Matrix4<f32> = Matrix4::from_axis_angle(vec3(0.5, 1.0, 0.6).normalize(),
                                                                    Rad(self.glfw.get_time() as f32));
                 let view: Matrix4<f32> = Matrix4::from_translation(vec3(0., 0., -3.));
                 shader.set_mat4f("model", &model);
                 shader.set_mat4f("view", &view);
 
                 gl::Enable(gl::DEPTH_TEST);
+                /*
                 gl::BindVertexArray(vao);
                 for (i, position) in cube_positions.iter().enumerate() {
                     // calculate the model matrix for each object and pass it to shader before drawing
@@ -142,8 +140,9 @@ impl Client {
                     shader.set_mat4f("model", &model);
 
                     gl::DrawArrays(gl::TRIANGLES, 0, 36);
-                }
+                }*/
             }
+            brazier_model.draw(&mut shader);
 
             self.window.swap_buffers();
             self.glfw.poll_events();

@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate memoffset;
+
 extern crate gl;
 
 use glfw::WindowMode;
