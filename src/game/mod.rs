@@ -5,7 +5,7 @@ use std::path::Path;
 use cgmath::*;
 pub use glfw::{Context, Glfw, WindowMode};
 
-use graphics::Mat4;
+use graphics::{Camera, Mat4};
 pub use renderer::GameRenderer;
 pub use window::Window;
 
@@ -20,6 +20,7 @@ pub struct Client {
     pub window: Window,
     pub renderer: GameRenderer,
     pub running: bool,
+    pub cursor_locked: bool,
 }
 
 impl Client {
@@ -29,10 +30,43 @@ impl Client {
             window,
             renderer: GameRenderer::new(),
             running: true,
+            cursor_locked: false,
+        }
+    }
+
+    pub fn lock_cursor(&mut self) {
+        self.cursor_locked = true;
+        self.window.handle.set_cursor_mode(glfw::CursorMode::Disabled);
+        let (width, height) = self.window.get_size();
+        self.window.handle.set_cursor_pos(width as f64 / 2.0, height as f64 / 2.0);
+    }
+
+    pub fn unlock_cursor(&mut self) {
+        self.cursor_locked = false;
+        self.window.handle.set_cursor_mode(glfw::CursorMode::Normal);
+    }
+
+    pub fn process_movement(&self, camera: &mut Camera, direction: i32, delta_time: f32) {
+        let velocity = 2.5*delta_time;
+        let front = camera.get_front();
+        let right = camera.get_right();
+        if direction == 1 {
+            camera.position += front * velocity;
+        }
+        if direction == 2 {
+            camera.position += -(front * velocity);
+        }
+        if direction == 3 {
+            camera.position += -(right * velocity);
+        }
+        if direction == 4 {
+            camera.position += right * velocity;
         }
     }
 
     pub fn run(&mut self) {
+        self.lock_cursor();
+
         let mut shader = graphics::Shader::load(Path::new("assets/shaders/shader.vsh"), Path::new("assets/shaders/shader.fsh"))
             .expect("Could not create shader program.");
 
@@ -56,11 +90,21 @@ impl Client {
             shader.use_program();
         }
 
+        let mut camera = Camera::default();
+        camera.position = cgmath::point3(0., 0., 3.);
+        camera.set_yaw(-90.0);
+
         let mut wireframe = false;
 
+        let mut delta_time: f32; // time between current frame and last frame
+        let mut last_frame: f32 = 0.0;
+
         while self.running {
-            let view: Mat4 = Mat4::from_translation(vec3(0., 0., -3.));
-            self.renderer.update_view(view);
+            let current_frame = self.glfw.get_time() as f32;
+            delta_time = current_frame - last_frame;
+            last_frame = current_frame;
+
+            self.renderer.update_view(camera.get_view_matrix());
 
             unsafe {
                 gl::ClearColor(0.0, 0.0, 0.0, 1.0);
@@ -85,6 +129,7 @@ impl Client {
 
             self.window.swap_buffers();
             self.glfw.poll_events();
+            let mut cursor_locked = self.cursor_locked;
             for (_, event) in glfw::flush_messages(&self.window.events) {
                 match event {
                     glfw::WindowEvent::Key(key, _, action, _) => {
@@ -96,7 +141,22 @@ impl Client {
                                 }
                             }
                             glfw::Key::Escape => { self.running = false; }
+                            glfw::Key::T => { if action == Action::Release { cursor_locked = !cursor_locked; } }
                             _ => {}
+                        }
+                    }
+                    glfw::WindowEvent::CursorPos(x_pos, y_pos) => {
+                        if self.cursor_locked {
+                            let (x_pos, y_pos) = (x_pos as f32, y_pos as f32);
+
+                            let (width, height) = self.window.get_size();
+
+                            let x_offset = x_pos - (width as f32 / 2.0);
+                            let y_offset = (height as f32 / 2.0) - y_pos; // reversed since y-coordinates go from bottom to top
+
+                            camera.set_angle(camera.get_yaw() + x_offset * 0.05, camera.get_pitch() + y_offset * 0.05);
+
+                            self.window.handle.set_cursor_pos(width as f64 / 2.0, height as f64 / 2.0);
                         }
                     }
                     glfw::WindowEvent::FramebufferSize(width, height) => {
@@ -105,6 +165,23 @@ impl Client {
                     }
                     _ => {}
                 }
+            }
+
+            if self.window.handle.get_key(glfw::Key::W) == Action::Press {
+                self.process_movement(&mut camera, 1, delta_time);
+            }
+            if self.window.handle.get_key(glfw::Key::S) == Action::Press {
+                self.process_movement(&mut camera, 2, delta_time);
+            }
+            if self.window.handle.get_key(glfw::Key::A) == Action::Press {
+                self.process_movement(&mut camera, 3, delta_time);
+            }
+            if self.window.handle.get_key(glfw::Key::D) == Action::Press {
+                self.process_movement(&mut camera, 4, delta_time);
+            }
+
+            if cursor_locked != self.cursor_locked {
+                if cursor_locked { self.lock_cursor(); } else { self.unlock_cursor(); }
             }
 
             if self.window.should_close() { self.running = false; }

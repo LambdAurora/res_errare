@@ -49,6 +49,7 @@ pub fn new(glfw_ctx: &glfw::Glfw, width: u32, height: u32, title: &str, mode: gl
         .map(|win| Window { handle: win.0, events: win.1 })
         .map(|mut w| {
             w.handle.set_key_polling(true);
+            w.handle.set_cursor_pos_polling(true);
             w.handle.set_framebuffer_size_polling(true);
             w
         })
