@@ -22,9 +22,11 @@ pub use shader::Shader;
 pub use texture::Texture;
 
 pub mod camera;
+pub mod cube_map;
 pub mod mesh;
 pub mod model;
 pub mod shader;
+pub mod skybox;
 pub mod texture;
 
 pub type Mat4 = cgmath::Matrix4<f32>;

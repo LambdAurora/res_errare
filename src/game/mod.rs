@@ -17,6 +17,7 @@
 
 extern crate glfw;
 
+use std::borrow::Borrow;
 use std::path::Path;
 
 use cgmath::*;
@@ -64,7 +65,7 @@ impl Client {
     }
 
     pub fn process_movement(&self, camera: &mut Camera, direction: i32, delta_time: f32) {
-        let velocity = 2.5*delta_time;
+        let velocity = 2.5 * delta_time;
         let front = camera.get_front();
         let right = camera.get_right();
         if direction == 1 {
@@ -89,6 +90,13 @@ impl Client {
 
         let brazier_model = graphics::Model::new(Path::new("assets/models/brazier.obj"), true);
 
+        let mut skybox = graphics::skybox::Skybox::load(
+            graphics::cube_map::CubeMapTexture::load_from_directory(Path::new("assets/textures/skybox"),
+                                                                    String::from("jpg").borrow(), false)
+                .expect("Could not load skybox."))
+            .expect("Could not load skybox.");
+        skybox.scale(50.0);
+
         // world space positions of our cubes
         let cube_positions: [Vector3<f32>; 10] = [vec3(0.0, 0.0, 0.0),
             vec3(2.0, 5.0, -15.0),
@@ -108,13 +116,18 @@ impl Client {
         }
 
         let mut camera = Camera::default();
-        camera.position = cgmath::point3(0., 0., 3.);
+        camera.position = cgmath::point3(0., 0., 0.);
         camera.set_yaw(-90.0);
 
         let mut wireframe = false;
 
         let mut delta_time: f32; // time between current frame and last frame
         let mut last_frame: f32 = 0.0;
+
+        unsafe {
+            gl::Enable(gl::DEPTH_TEST);
+            gl::Enable(gl::CULL_FACE);
+        }
 
         while self.running {
             let current_frame = self.glfw.get_time() as f32;
@@ -131,8 +144,6 @@ impl Client {
                 let model: Mat4 = Mat4::from_axis_angle(vec3(0.5, 1.0, 0.6).normalize(),
                                                         Rad(self.glfw.get_time() as f32));
                 shader.set_mat4f("model", &model);
-
-                gl::Enable(gl::DEPTH_TEST);
             }
             for (i, position) in cube_positions.iter().enumerate() {
                 // calculate the model matrix for each object and pass it to shader before drawing
@@ -143,6 +154,8 @@ impl Client {
 
                 brazier_model.draw(&mut shader);
             }
+
+            skybox.draw();
 
             self.window.swap_buffers();
             self.glfw.poll_events();

@@ -46,14 +46,10 @@ impl Texture {
     /// Loads the texture from the given path.
     pub fn load(path: &Path, flip: bool) -> Result<Texture, String> {
         unsafe { stb_image::stb_image::bindgen::stbi_set_flip_vertically_on_load(flip as i32); }
-        match stb_image::image::load(path) {
-            LoadResult::ImageU8(img) => Texture::new(img),
-            LoadResult::ImageF32(_) => Err(String::from("Does not support ImageF32")),
-            LoadResult::Error(err) => Err(err)
-        }
+        Texture::new(load_image(path)?)
     }
 
-    fn get_format(image: &Image<u8>) -> u32 {
+    pub fn get_format(image: &Image<u8>) -> u32 {
         match image.depth {
             1 => gl::RED,
             2 => gl::RG,
@@ -93,4 +89,12 @@ impl Texture {
 /// Unbinds texture.
 pub fn unbind() {
     unsafe { gl::BindTexture(gl::TEXTURE_2D, 0); }
+}
+
+pub fn load_image(path: &Path) -> Result<Image<u8>, String> {
+    match stb_image::image::load(path) {
+        LoadResult::ImageU8(img) => Ok(img),
+        LoadResult::ImageF32(_) => Err(String::from("Does not support ImageF32")),
+        LoadResult::Error(err) => Err(err)
+    }
 }

@@ -83,7 +83,7 @@ impl Shader {
         Shader::new_with_geometry(&vertex_shader_src[..], &fragment_shader_src[..], &geometry_shader_src[..])
     }
 
-    pub fn use_program(&mut self)
+    pub fn use_program(&self)
     {
         unsafe {
             gl::UseProgram(self.program);
