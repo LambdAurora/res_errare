@@ -116,7 +116,7 @@ impl Client {
         }
 
         let mut camera = Camera::default();
-        camera.position = cgmath::point3(0., 0., 0.);
+        camera.position = cgmath::point3(0., 0., 3.);
         camera.set_yaw(-90.0);
 
         let mut wireframe = false;
