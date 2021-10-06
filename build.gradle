@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+}
+
+group = project.maven_group
+version = project.version
+archivesBaseName = project.archives_base_name
+
+def targetJavaVersion = 17
+
+dependencies {
+
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion(targetJavaVersion)
+    targetCompatibility = JavaVersion.toVersion(targetJavaVersion)
+
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.forkOptions.jvmArgs = [
+        "--add-opens", "jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
+    ]
+
+    it.options.compilerArgs = [
+        "--add-modules", "jdk.incubator.foreign"
+    ]
+
+    it.options.encoding = 'UTF-8'
+
+    it.options.release.set(targetJavaVersion)
+}
+
+tasks.withType(JavaExec).configureEach {
+    it.jvmArgs("-Dforeign.restricted=permit",
+        "--add-modules", "jdk.incubator.foreign")
+}
+
+tasks.withType(Test).configureEach {
+    it.useJUnitPlatform()
+    it.jvmArgs("-Dforeign.restricted=permit",
+        "--add-modules", "jdk.incubator.foreign")
+}
