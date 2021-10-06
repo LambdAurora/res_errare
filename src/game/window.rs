@@ -43,6 +43,10 @@ impl Window {
         (width as u32, height as u32)
     }
 
+    pub fn get_content_scale(&self) -> (f32, f32) {
+        self.handle.get_content_scale()
+    }
+
     pub fn make_current(&mut self) {
         self.handle.make_current();
     }

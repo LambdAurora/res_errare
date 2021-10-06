@@ -27,6 +27,7 @@ pub mod mesh;
 pub mod model;
 pub mod shader;
 pub mod skybox;
+pub mod text;
 pub mod texture;
 
 pub type Mat4 = cgmath::Matrix4<f32>;
