@@ -1,4 +1,4 @@
-package dev.lambdaurora.res_errare.render;
+package dev.lambdaurora.res_errare.render.shader;
 
 /**
  * Represents a shader type.

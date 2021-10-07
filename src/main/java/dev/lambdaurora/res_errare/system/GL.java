@@ -1,6 +1,6 @@
 package dev.lambdaurora.res_errare.system;
 
-import dev.lambdaurora.res_errare.render.ShaderType;
+import dev.lambdaurora.res_errare.render.shader.ShaderType;
 import jdk.incubator.foreign.*;
 
 import java.lang.invoke.MethodHandle;
@@ -105,9 +105,9 @@ public class GL {
 	}
 
 	public int getShaderiv(int shader, int name) {
-		var function = this.getFunction("glGetShaderiv", address -> CLinker.getInstance().downcallHandle(address,
-				MethodType.methodType(void.class, int.class, int.class, MemoryAddress.class),
-				FunctionDescriptor.ofVoid(CLinker.C_INT, CLinker.C_INT, CLinker.C_POINTER)));
+		var function = this.getFunction("glGetShaderiv",
+				address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, MemoryAddress.class)
+		);
 
 		try (var scope = ResourceScope.newConfinedScope()) {
 			var allocator = SegmentAllocator.ofScope(scope);
@@ -123,19 +123,135 @@ public class GL {
 	}
 
 	public String getShaderInfoLog(int shader, int maxLength) {
-		var function = this.getFunction("glGetShaderInfoLog", address -> CLinker.getInstance().downcallHandle(address,
-				MethodType.methodType(void.class, int.class, int.class, MemoryAddress.class, MemoryAddress.class),
-				FunctionDescriptor.ofVoid(CLinker.C_INT, CLinker.C_INT, CLinker.C_POINTER, CLinker.C_POINTER)));
+		return this.getInfoLog(this.getFunction("glGetShaderInfoLog", address ->
+				LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, MemoryAddress.class, MemoryAddress.class)
+		), shader, maxLength);
+	}
 
+	public int createProgram() {
+		try {
+			return (int) this.getFunction("glCreateProgram",
+					address -> LibraryLoader.getFunctionHandle(address, int.class)
+			).invokeExact();
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void deleteProgram(int program) {
+		try {
+			this.getFunction("glDeleteShader",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class)
+			).invokeExact(program);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void attachShader(int program, int shader) {
+		try {
+			this.getFunction("glAttachShader",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
+			).invokeExact(program, shader);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void detachShader(int program, int shader) {
+		try {
+			this.getFunction("glDetachShader",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
+			).invokeExact(program, shader);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void linkProgram(int program) {
+		try {
+			this.getFunction("glLinkProgram",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class)
+			).invokeExact(program);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public int getProgramiv(int program, int name) {
+		var function = this.getFunction("glGetProgramiv",
+				address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, MemoryAddress.class)
+		);
+
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			var resultPtr = allocator.allocate(MemoryLayouts.JAVA_INT);
+
+			function.invokeExact(program, name, resultPtr.address());
+
+			return resultPtr.toIntArray()[0];
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public String getProgramInfoLog(int program, int maxLength) {
+		return this.getInfoLog(this.getFunction("glGetProgramInfoLog", address ->
+				LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, MemoryAddress.class, MemoryAddress.class)
+		), program, maxLength);
+	}
+
+	private String getInfoLog(MethodHandle function, int id, int maxLength) {
 		try (var scope = ResourceScope.newConfinedScope()) {
 			var allocator = SegmentAllocator.ofScope(scope);
 
 			var lengthSegment = allocator.allocate(MemoryLayouts.JAVA_INT);
 			var logSegment = allocator.allocate(maxLength);
 
-			function.invokeExact(shader, maxLength, lengthSegment.address(), logSegment.address());
+			function.invokeExact(id, maxLength, lengthSegment.address(), logSegment.address());
 
 			return CLinker.toJavaString(logSegment);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void useProgram(int program) {
+		try {
+			this.getFunction("glUseProgram",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class)
+			).invokeExact(program);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public int getUniformLocation(int program, String name) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			return (int) this.getFunction("glGetUniformLocation",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
+			).invokeExact(program, CLinker.toCString(name, scope).address());
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void uniform1i(int location, int value) {
+		try {
+			this.getFunction("glUniform1i",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
+			).invokeExact(location, value);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void uniform1f(int location, float value) {
+		try {
+			this.getFunction("glUniform1f",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, float.class)
+			).invokeExact(location, value);
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
 		}
@@ -153,6 +269,7 @@ public class GL {
 
 	public static class GL20 {
 		public static final int COMPILE_STATUS = 0x8b81;
+		public static final int LINK_STATUS = 0x8b82;
 		public static final int INFO_LOG_LENGTH = 0x8b84;
 	}
 }

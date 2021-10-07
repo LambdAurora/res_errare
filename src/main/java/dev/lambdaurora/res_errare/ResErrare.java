@@ -1,7 +1,8 @@
 package dev.lambdaurora.res_errare;
 
-import dev.lambdaurora.res_errare.render.Shader;
-import dev.lambdaurora.res_errare.render.ShaderType;
+import dev.lambdaurora.res_errare.render.shader.Shader;
+import dev.lambdaurora.res_errare.render.shader.ShaderProgram;
+import dev.lambdaurora.res_errare.render.shader.ShaderType;
 import dev.lambdaurora.res_errare.system.GL;
 import dev.lambdaurora.res_errare.system.GLFW;
 import dev.lambdaurora.res_errare.window.Window;
@@ -39,7 +40,31 @@ public final class ResErrare {
 				}
 				""";
 
-		var result = Shader.compile(ShaderType.VERTEX, shaderSource);
+		var fragmentSrc = """
+				#version 330 core
+				    
+				in vec3 normal;
+				in vec2 texture_coords;
+				    
+				out vec4 FragColor;
+				    
+				uniform sampler2D texture_diffuse1;
+				uniform sampler2D texture_normal1;
+				uniform sampler2D texture_specular1;
+				    
+				void main() {
+				    vec4 texture_color = texture(texture_diffuse1, texture_coords);
+				    if (texture_color.a < 0.1)
+				        discard;
+				    FragColor = texture_color;
+				}
+				""";
+
+		var result = new ShaderProgram.Builder()
+				.shader(Shader.compile(ShaderType.FRAGMENT, fragmentSrc))
+				.shader(Shader.compile(ShaderType.VERTEX, shaderSource))
+				.withCleanup()
+				.build();
 		if (result.hasError())
 			throw result.getError();
 
@@ -53,16 +78,19 @@ public final class ResErrare {
 					(color & 255) / 255.f,
 					1.f);
 
+			shader.use();
+
 			GLFW.pollEvents();
 			window.swapBuffers();
 		}
 
+		shader.delete();
 		window.destroy();
 		GLFW.terminate();
 	}
 
 	public static int getRainbowRGB(double x, double y) {
-		float speed = 3600.0f;
+		float speed = 8600.0f;
 		return Color.HSBtoRGB((float) ((System.currentTimeMillis() - x * 10.0D - y * 10.0D) % speed) / speed,
 				.75f, .9f);
 	}

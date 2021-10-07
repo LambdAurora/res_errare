@@ -1,4 +1,4 @@
-package dev.lambdaurora.res_errare.render;
+package dev.lambdaurora.res_errare.render.shader;
 
 import dev.lambdaurora.res_errare.system.GL;
 import dev.lambdaurora.res_errare.util.Result;
