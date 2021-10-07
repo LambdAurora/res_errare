@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
 group = project.maven_group
@@ -19,6 +20,10 @@ java {
     withSourcesJar()
 }
 
+application {
+    mainClass = 'dev.lambdaurora.res_errare.ResErrare'
+}
+
 tasks.withType(JavaCompile).configureEach {
     it.options.forkOptions.jvmArgs = [
         "--add-opens", "jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
@@ -34,7 +39,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.withType(JavaExec).configureEach {
-    it.jvmArgs("-Dforeign.restricted=permit",
+    it.jvmArgs("--enable-native-access=ALL-UNNAMED",
         "--add-modules", "jdk.incubator.foreign")
 }
 
