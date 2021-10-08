@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'application'
+    id 'org.cadixdev.licenser' version '0.6.1'
 }
 
 group = project.maven_group
@@ -30,6 +31,11 @@ jar {
                 'Main-Class': 'dev.lambdaurora.res_errare.ResErrare'
         )
     }
+}
+
+license {
+    header file('HEADER')
+    include '**/*.java'
 }
 
 tasks.withType(JavaCompile).configureEach {
