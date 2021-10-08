@@ -24,13 +24,21 @@ application {
     mainClass = 'dev.lambdaurora.res_errare.ResErrare'
 }
 
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'dev.lambdaurora.res_errare.ResErrare'
+        )
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     it.options.forkOptions.jvmArgs = [
-        "--add-opens", "jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
+            "--add-opens", "jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
     ]
 
     it.options.compilerArgs = [
-        "--add-modules", "jdk.incubator.foreign"
+            "--add-modules", "jdk.incubator.foreign"
     ]
 
     it.options.encoding = 'UTF-8'
@@ -40,11 +48,11 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.withType(JavaExec).configureEach {
     it.jvmArgs("--enable-native-access=ALL-UNNAMED",
-        "--add-modules", "jdk.incubator.foreign")
+            "--add-modules", "jdk.incubator.foreign")
 }
 
 tasks.withType(Test).configureEach {
     it.useJUnitPlatform()
     it.jvmArgs("-Dforeign.restricted=permit",
-        "--add-modules", "jdk.incubator.foreign")
+            "--add-modules", "jdk.incubator.foreign")
 }
