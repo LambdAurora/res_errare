@@ -1,6 +1,7 @@
 package dev.lambdaurora.res_errare.system;
 
 import dev.lambdaurora.res_errare.render.shader.ShaderType;
+import dev.lambdaurora.res_errare.render.texture.TextureType;
 import jdk.incubator.foreign.*;
 
 import java.lang.invoke.MethodHandle;
@@ -9,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-public class GL {
+public final class GL {
 	private static GL self;
 	private final Map<String, MethodHandle> functions = new HashMap<>();
 	private final FunctionFetcher functionFetcher;
@@ -54,6 +55,46 @@ public class GL {
 	}
 
 	/* GL 2.0 */
+
+	public void bindTexture(TextureType type, int texture) {
+		try {
+			this.getFunction("glBindTexture",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
+			).invokeExact(type.glId(), texture);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public int[] genTextures(int number) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			var cTextures = allocator.allocateArray(CLinker.C_INT, number);
+
+			this.getFunction("glGenTextures",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
+			).invokeExact(number, cTextures.address());
+
+			return cTextures.toIntArray();
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void deleteTextures(int... textures) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			var cTextures = allocator.allocateArray(CLinker.C_INT, textures);
+
+			this.getFunction("glDeleteTextures",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
+			).invokeExact(textures.length, cTextures.address());
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
 
 	public int createShader(ShaderType type) {
 		try {
@@ -262,12 +303,12 @@ public class GL {
 		MemoryAddress fetch(String name);
 	}
 
-	public static class GL11 {
+	public static final class GL11 {
 		public static final int GL_DEPTH_BUFFER_BIT = 0x100;
 		public static final int GL_COLOR_BUFFER_BIT = 0x4000;
 	}
 
-	public static class GL20 {
+	public static final class GL20 {
 		public static final int COMPILE_STATUS = 0x8b81;
 		public static final int LINK_STATUS = 0x8b82;
 		public static final int INFO_LOG_LENGTH = 0x8b84;

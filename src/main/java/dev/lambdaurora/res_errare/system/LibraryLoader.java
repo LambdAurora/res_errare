@@ -10,7 +10,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LibraryLoader {
+public final class LibraryLoader {
 	private static final String ARCH = System.getProperty("os.arch");
 	private static final List<String> LOADED_LIBRARIES = new ArrayList<>();
 	private static final SymbolLookup SYMBOL_LOOKUP = SymbolLookup.loaderLookup();

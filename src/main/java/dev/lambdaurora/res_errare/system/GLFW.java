@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-public class GLFW {
+public final class GLFW {
 	private static final Map<String, NativeFunction<?>> FUNCTIONS = new HashMap<>();
 
 	public static void init() {

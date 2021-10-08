@@ -14,6 +14,9 @@ public enum ShaderType {
 		this.glId = glId;
 	}
 
+	/**
+	 * {@return the OpenGL identifier of this shader type}
+	 */
 	public int glId() {
 		return this.glId;
 	}
