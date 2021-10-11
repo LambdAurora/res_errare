@@ -17,13 +17,28 @@
 
 package dev.lambdaurora.res_errare.render.shader;
 
+import dev.lambdaurora.res_errare.resource.ResourceManager;
+import dev.lambdaurora.res_errare.resource.ResourceType;
 import dev.lambdaurora.res_errare.system.GL;
+import dev.lambdaurora.res_errare.util.Identifier;
 import dev.lambdaurora.res_errare.util.Result;
+
+import java.io.IOException;
 
 /**
  * Represents an OpenGL shader.
  */
-public record Shader(ShaderType type, int id) {
+public record Shader(ShaderType type, int id) implements AutoCloseable {
+	public static Result<Shader, CreationException> compile(ShaderType type, Identifier shaderId) {
+		var resourceId = new Identifier(shaderId.namespace(), "shaders/" + shaderId.path() + '.' + type.extension());
+
+		try {
+			return compile(type, ResourceManager.getDefault(ResourceType.ASSETS).getStringFrom(resourceId));
+		} catch (IOException e) {
+			return Result.fail(new CreationException("Could not load shader " + shaderId + " of type " + type + ".", e));
+		}
+	}
+
 	public static Result<Shader, CreationException> compile(ShaderType type, String source) {
 		int id = GL.get().createShader(type);
 
@@ -44,7 +59,8 @@ public record Shader(ShaderType type, int id) {
 		return Result.ok(new Shader(type, id));
 	}
 
-	public void delete() {
+	@Override
+	public void close() {
 		GL.get().deleteShader(this.id());
 	}
 

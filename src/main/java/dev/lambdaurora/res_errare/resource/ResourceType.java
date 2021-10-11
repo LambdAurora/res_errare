@@ -15,10 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dev.lambdaurora.res_errare.util;
+package dev.lambdaurora.res_errare.resource;
 
-public final class MathHelper {
-	public static float lerp(float v0, float v1, float t) {
-		return (1 - t) * v0 + t * v1;
+/**
+ * Represents the resource types.
+ */
+public enum ResourceType {
+	ASSETS("assets"),
+	DATA("data");
+
+	private final String directory;
+
+	ResourceType(String directory) {
+		this.directory = directory;
+	}
+
+	public String directory() {
+		return this.directory;
 	}
 }

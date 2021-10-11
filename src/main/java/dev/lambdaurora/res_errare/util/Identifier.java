@@ -40,12 +40,16 @@ public class Identifier {
 		return this.path;
 	}
 
+	public Identifier concat(String rest) {
+		return new Identifier(this.namespace, this.path + rest);
+	}
+
 	public Identifier sub(String subPath) {
 		var separator = "/";
 		if (this.path.endsWith(separator))
 			separator = "";
 
-		return new Identifier(this.namespace, this.path + separator + subPath);
+		return this.concat(separator + subPath);
 	}
 
 	@Override

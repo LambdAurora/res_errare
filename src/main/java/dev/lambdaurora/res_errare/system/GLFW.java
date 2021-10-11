@@ -17,10 +17,8 @@
 
 package dev.lambdaurora.res_errare.system;
 
-import jdk.incubator.foreign.CLinker;
-import jdk.incubator.foreign.FunctionDescriptor;
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.ResourceScope;
+import dev.lambdaurora.res_errare.util.math.Dimensions2D;
+import jdk.incubator.foreign.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -101,6 +99,24 @@ public final class GLFW {
 					.handle().invoke(address) != 0;
 		} catch (Throwable e) {
 			return false;
+		}
+	}
+
+	public static Dimensions2D getFramebufferSize(MemoryAddress window) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			var widthSegment = allocator.allocate(CLinker.C_INT);
+			var heightSegment = allocator.allocate(CLinker.C_INT);
+
+			getFunction("glfwGetFramebufferSize", name -> NativeFunction.of(name, void.class,
+					new Class[]{MemoryAddress.class, MemoryAddress.class, MemoryAddress.class},
+					FunctionDescriptor.ofVoid(CLinker.C_POINTER, CLinker.C_POINTER, CLinker.C_POINTER)))
+					.handle().invoke(window, widthSegment.address(), heightSegment.address());
+
+			return new Dimensions2D(widthSegment.toIntArray()[0], heightSegment.toIntArray()[0]);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
 		}
 	}
 

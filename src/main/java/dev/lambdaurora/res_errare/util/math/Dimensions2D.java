@@ -15,35 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dev.lambdaurora.res_errare.render.shader;
-
-import dev.lambdaurora.res_errare.system.OpenGLIdProvider;
+package dev.lambdaurora.res_errare.util.math;
 
 /**
- * Represents a shader type.
+ * Represents dimensions in 2 dimensions.
  */
-public enum ShaderType implements OpenGLIdProvider {
-	FRAGMENT("fsh", 0x8b30),
-	GEOMETRY("gsh", 0x8dd9),
-	VERTEX("vsh", 0x8b31);
-
-	private final String extension;
-	private final int glId;
-
-	ShaderType(String extension, int glId) {
-		this.extension = extension;
-		this.glId = glId;
-	}
-
-	/**
-	 * {@return the file extension of this shader type}
-	 */
-	public String extension() {
-		return this.extension;
-	}
-
-	@Override
-	public int glId() {
-		return this.glId;
-	}
+public record Dimensions2D(int width, int height) {
 }

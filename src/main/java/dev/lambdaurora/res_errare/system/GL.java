@@ -17,7 +17,9 @@
 
 package dev.lambdaurora.res_errare.system;
 
+import dev.lambdaurora.res_errare.render.GeometricPrimitive;
 import dev.lambdaurora.res_errare.render.shader.ShaderType;
+import dev.lambdaurora.res_errare.render.texture.Image;
 import dev.lambdaurora.res_errare.render.texture.TextureType;
 import jdk.incubator.foreign.*;
 
@@ -48,16 +50,20 @@ public final class GL {
 		return this.functions.computeIfAbsent(functionName, name -> functionFactory.apply(this.functionFetcher.fetch(name)));
 	}
 
-	/* GL 1.1 */
-
-	public void clear(int mask) {
+	private void voidCallInt(String functionName, int param) {
 		try {
-			this.getFunction("glClear", address -> CLinker.getInstance().downcallHandle(address,
-							MethodType.methodType(void.class, int.class), FunctionDescriptor.ofVoid(CLinker.C_INT)))
-					.invokeExact(mask);
+			this.getFunction(functionName,
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class)
+			).invokeExact(param);
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
 		}
+	}
+
+	/* GL 1.1 */
+
+	public void clear(int mask) {
+		voidCallInt("glClear", mask);
 	}
 
 	public void clearColor(float red, float green, float blue, float alpha) {
@@ -66,6 +72,98 @@ public final class GL {
 							MethodType.methodType(void.class, float.class, float.class, float.class, float.class),
 							FunctionDescriptor.ofVoid(CLinker.C_FLOAT, CLinker.C_FLOAT, CLinker.C_FLOAT, CLinker.C_FLOAT)))
 					.invokeExact(red, green, blue, alpha);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void depthFunc(int func) {
+		voidCallInt("glDepthFunc", func);
+	}
+
+	public void drawArrays(GeometricPrimitive mode, int first, int count) {
+		try {
+			this.getFunction("glDrawArrays", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class))
+					.invokeExact(mode.glId(), first, count);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void enable(int capability) {
+		voidCallInt("glEnable", capability);
+	}
+
+	public void disable(int capability) {
+		voidCallInt("glDisable", capability);
+	}
+
+	public void viewport(int x, int y, int width, int height) {
+		try {
+			this.getFunction("glViewport", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, int.class))
+					.invokeExact(x, y, width, height);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	/* 1.3 */
+
+	public void activeTexture(int texture) {
+		voidCallInt("glActiveTexture", texture);
+	}
+
+	/* 1.5 */
+
+	public void bindBuffer(int type, int vbo) {
+		try {
+			this.getFunction("glBindBuffer",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
+			).invokeExact(type, vbo);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public int[] genBuffers(int n) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			var cBuffers = allocator.allocateArray(CLinker.C_INT, n);
+
+			this.getFunction("glGenBuffers",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
+			).invokeExact(n, cBuffers.address());
+
+			return cBuffers.toIntArray();
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void deleteBuffers(int... buffers) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			var cBuffers = allocator.allocateArray(CLinker.C_INT, buffers);
+
+			this.getFunction("glDeleteBuffers",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
+			).invokeExact(buffers.length, cBuffers.address());
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void bufferData(int type, float[] data, int usage) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			var cData = allocator.allocateArray(CLinker.C_FLOAT, data);
+
+			this.getFunction("glBufferData",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, long.class, MemoryAddress.class, int.class)
+			).invokeExact(type, (long) data.length * CLinker.C_FLOAT.byteSize(), cData.address(), usage);
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
 		}
@@ -83,15 +181,15 @@ public final class GL {
 		}
 	}
 
-	public int[] genTextures(int number) {
+	public int[] genTextures(int n) {
 		try (var scope = ResourceScope.newConfinedScope()) {
 			var allocator = SegmentAllocator.ofScope(scope);
 
-			var cTextures = allocator.allocateArray(CLinker.C_INT, number);
+			var cTextures = allocator.allocateArray(CLinker.C_INT, n);
 
 			this.getFunction("glGenTextures",
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
-			).invokeExact(number, cTextures.address());
+			).invokeExact(n, cTextures.address());
 
 			return cTextures.toIntArray();
 		} catch (Throwable e) {
@@ -113,6 +211,37 @@ public final class GL {
 		}
 	}
 
+	public void texImage2D(OpenGLIdProvider target, int level, int internalFormat, Image image) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var imgData = image.getImageAddress(scope);
+
+			this.getFunction("glTexImage2D",
+							address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, int.class,
+									int.class, int.class, int.class, int.class, MemoryAddress.class))
+					.invokeExact(target.glId(), level, internalFormat, image.width(), image.height(), 0, image.format().glId(), GL11.UNSIGNED_BYTE, imgData);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void texParameteri(TextureType target, OpenGLIdProvider paramName, int value) {
+		try {
+			this.getFunction("glTexParameteri", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class))
+					.invokeExact(target.glId(), paramName.glId(), value);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void texParameterf(TextureType target, OpenGLIdProvider paramName, float value) {
+		try {
+			this.getFunction("glTexParameterf", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, float.class))
+					.invokeExact(target.glId(), paramName.glId(), value);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
 	public int createShader(ShaderType type) {
 		try {
 			return (int) this.getFunction("glCreateShader", address -> CLinker.getInstance().downcallHandle(address,
@@ -124,13 +253,7 @@ public final class GL {
 	}
 
 	public void deleteShader(int shader) {
-		try {
-			this.getFunction("glDeleteShader", address -> CLinker.getInstance().downcallHandle(address,
-							MethodType.methodType(void.class, int.class), FunctionDescriptor.ofVoid(CLinker.C_INT)))
-					.invokeExact(shader);
-		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
-		}
+		voidCallInt("glDeleteShader", shader);
 	}
 
 	public void shaderSource(int shader, String... source) {
@@ -153,13 +276,7 @@ public final class GL {
 	}
 
 	public void compileShader(int shader) {
-		try {
-			this.getFunction("glCompileShader", address -> CLinker.getInstance().downcallHandle(address,
-							MethodType.methodType(void.class, int.class), FunctionDescriptor.ofVoid(CLinker.C_INT)))
-					.invokeExact(shader);
-		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
-		}
+		voidCallInt("glCompileShader", shader);
 	}
 
 	public int getShaderiv(int shader, int name) {
@@ -197,13 +314,7 @@ public final class GL {
 	}
 
 	public void deleteProgram(int program) {
-		try {
-			this.getFunction("glDeleteShader",
-					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class)
-			).invokeExact(program);
-		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
-		}
+		voidCallInt("glDeleteProgram", program);
 	}
 
 	public void attachShader(int program, int shader) {
@@ -227,13 +338,7 @@ public final class GL {
 	}
 
 	public void linkProgram(int program) {
-		try {
-			this.getFunction("glLinkProgram",
-					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class)
-			).invokeExact(program);
-		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
-		}
+		voidCallInt("glLinkProgram", program);
 	}
 
 	public int getProgramiv(int program, int name) {
@@ -276,19 +381,13 @@ public final class GL {
 	}
 
 	public void useProgram(int program) {
-		try {
-			this.getFunction("glUseProgram",
-					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class)
-			).invokeExact(program);
-		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
-		}
+		voidCallInt("glUseProgram", program);
 	}
 
 	public int getUniformLocation(int program, String name) {
 		try (var scope = ResourceScope.newConfinedScope()) {
 			return (int) this.getFunction("glGetUniformLocation",
-					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
+					address -> LibraryLoader.getFunctionHandle(address, int.class, int.class, MemoryAddress.class)
 			).invokeExact(program, CLinker.toCString(name, scope).address());
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
@@ -315,14 +414,80 @@ public final class GL {
 		}
 	}
 
+	public void enableVertexAttribArray(int index) {
+		voidCallInt("glEnableVertexAttribArray", index);
+	}
+
+	public void vertexAttribPointer(int index, int size, int type, boolean normalized, long stride, MemoryAddress pointer) {
+		try {
+			this.getFunction("glVertexAttribPointer",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, int.class, int.class, MemoryAddress.class)
+			).invokeExact(index, size, type, normalized ? 1 : 0, (int) stride, pointer);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	/* GL 3.0 */
+
+	public void bindVertexArray(int vao) {
+		voidCallInt("glBindVertexArray", vao);
+	}
+
+	public int[] genVertexArrays(int n) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			var cVertexArrays = allocator.allocateArray(CLinker.C_INT, n);
+
+			this.getFunction("glGenVertexArrays",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
+			).invokeExact(n, cVertexArrays.address());
+
+			return cVertexArrays.toIntArray();
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void deleteVertexArrays(int... vertexArrays) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			var cVertexArrays = allocator.allocateArray(CLinker.C_INT, vertexArrays);
+
+			this.getFunction("glDeleteVertexArrays",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
+			).invokeExact(vertexArrays.length, cVertexArrays.address());
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
 	@FunctionalInterface
 	public interface FunctionFetcher {
 		MemoryAddress fetch(String name);
 	}
 
 	public static final class GL11 {
-		public static final int GL_DEPTH_BUFFER_BIT = 0x100;
-		public static final int GL_COLOR_BUFFER_BIT = 0x4000;
+		public static final int DEPTH_BUFFER_BIT = 0x0100;
+		public static final int LESS = 0x0201;
+		public static final int EQUAL = 0x0202;
+		public static final int LEQUAL = 0x0203;
+		public static final int CULL_FACE = 0x0b44;
+		public static final int DEPTH_TEST = 0x0b71;
+		public static final int COLOR_BUFFER_BIT = 0x4000;
+		public static final int UNSIGNED_BYTE = 0x1401;
+		public static final int FLOAT = 0x1406;
+	}
+
+	public static final class GL13 {
+		public static final int TEXTURE0 = 0x84c0;
+	}
+
+	public static final class GL15 {
+		public static final int ARRAY_BUFFER = 0x8892;
+		public static final int STATIC_DRAW = 0x88e4;
 	}
 
 	public static final class GL20 {

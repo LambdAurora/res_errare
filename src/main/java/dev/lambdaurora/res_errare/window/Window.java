@@ -18,10 +18,14 @@
 package dev.lambdaurora.res_errare.window;
 
 import dev.lambdaurora.res_errare.system.GLFW;
+import dev.lambdaurora.res_errare.util.math.Dimensions2D;
 import jdk.incubator.foreign.MemoryAddress;
 
 import java.util.Optional;
 
+/**
+ * Represents a window.
+ */
 public class Window {
 	private final MemoryAddress handle;
 
@@ -48,6 +52,10 @@ public class Window {
 
 	public void destroy() {
 		GLFW.destroyWindow(this.handle);
+	}
+
+	public Dimensions2D getFramebufferSize() {
+		return GLFW.getFramebufferSize(this.handle);
 	}
 
 	public static Optional<Window> create(int width, int height, String title) {

@@ -18,13 +18,19 @@
 package dev.lambdaurora.res_errare.render.texture;
 
 import dev.lambdaurora.res_errare.system.GL;
+import dev.lambdaurora.res_errare.system.OpenGLIdProvider;
 
 /**
  * Represents a texture.
+ *
+ * @param <T> the accepted texture targets
  */
-public interface Texture {
+public interface Texture<T extends OpenGLIdProvider> extends AutoCloseable {
 	TextureType type();
 
+	/**
+	 * {@return the OpenGL identifier of this texture}
+	 */
 	int id();
 
 	/**
@@ -42,9 +48,28 @@ public interface Texture {
 	}
 
 	/**
+	 * Uploads the given image to the texture?
+	 *
+	 * @param target the texture target
+	 * @param level the level
+	 * @param image the image to upload
+	 */
+	default void upload(T target, int level, Image image) {
+		GL.get().texImage2D(target, level, Image.Format.ARGB.glId(), image);
+	}
+
+	default <V> void setParameter(TextureParameter<V> parameter, V value) {
+		switch (parameter.type()) {
+			case INTEGER -> GL.get().texParameteri(this.type(), parameter, parameter.getIntValue(value));
+			case FLOAT -> GL.get().texParameterf(this.type(), parameter, parameter.getFloatValue(value));
+		}
+	}
+
+	/**
 	 * Deletes the texture. Once deleted the texture should not be used anymore.
 	 */
-	default void delete() {
+	@Override
+	default void close() {
 		GL.get().deleteTextures(this.id());
 	}
 

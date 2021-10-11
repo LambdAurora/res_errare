@@ -15,35 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dev.lambdaurora.res_errare.render.shader;
+package dev.lambdaurora.res_errare.render.texture;
 
 import dev.lambdaurora.res_errare.system.OpenGLIdProvider;
 
 /**
- * Represents a shader type.
+ * Represents a texture parameter.
+ *
+ * @param <T> the accepted value type of this parameter
  */
-public enum ShaderType implements OpenGLIdProvider {
-	FRAGMENT("fsh", 0x8b30),
-	GEOMETRY("gsh", 0x8dd9),
-	VERTEX("vsh", 0x8b31);
+public interface TextureParameter<T> extends OpenGLIdProvider {
+	OpenGLInputType type();
 
-	private final String extension;
-	private final int glId;
+	int getIntValue(T input);
 
-	ShaderType(String extension, int glId) {
-		this.extension = extension;
-		this.glId = glId;
-	}
+	float getFloatValue(T input);
 
-	/**
-	 * {@return the file extension of this shader type}
-	 */
-	public String extension() {
-		return this.extension;
-	}
-
-	@Override
-	public int glId() {
-		return this.glId;
+	enum OpenGLInputType {
+		INTEGER,
+		FLOAT
 	}
 }

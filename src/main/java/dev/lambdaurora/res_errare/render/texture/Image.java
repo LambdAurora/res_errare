@@ -17,24 +17,46 @@
 
 package dev.lambdaurora.res_errare.render.texture;
 
-import dev.lambdaurora.res_errare.system.OpenGLIdProvider;
+import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.ResourceScope;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Represents the available texture types.
+ * Represents an image.
  */
-public enum TextureType implements OpenGLIdProvider {
-	TEXTURE_1D(0x0de0),
-	TEXTURE_2D(0x0de1),
-	TEXTURE_CUBE_MAP(0x8513);
+public interface Image extends AutoCloseable {
+	Format format();
 
-	private final int glId;
+	int width();
 
-	TextureType(int glId) {
-		this.glId = glId;
-	}
+	int height();
 
-	@Override
-	public int glId() {
-		return this.glId;
+	@Nullable MemoryAddress getImageAddress(ResourceScope scope);
+
+	enum Format {
+		RED(1, 0x1903),
+		GREEN(1, 0x1904),
+		BLUE(1, 0x1905),
+		RGB(3, 0x80e0),
+		/**
+		 * ARGB is only true in Java due to its big-endianness, for OpenGL it'll be BGRA.
+		 */
+		ARGB(4, 0x80e1);
+
+		private final int channelCount;
+		private final int glId;
+
+		Format(int channelCount, int glId) {
+			this.channelCount = channelCount;
+			this.glId = glId;
+		}
+
+		public int channelCount() {
+			return this.channelCount;
+		}
+
+		public int glId() {
+			return this.glId;
+		}
 	}
 }

@@ -23,13 +23,9 @@ import dev.lambdaurora.res_errare.util.Result;
 import java.util.ArrayList;
 import java.util.List;
 
-public record ShaderProgram(int id) {
+public record ShaderProgram(int id) implements AutoCloseable {
 	public void use() {
 		GL.get().useProgram(this.id);
-	}
-
-	public void delete() {
-		GL.get().deleteProgram(this.id);
 	}
 
 	private int getUniformLocation(String name) {
@@ -46,6 +42,11 @@ public record ShaderProgram(int id) {
 
 	public void setFloat(String name, float value) {
 		GL.get().uniform1f(this.getUniformLocation(name), value);
+	}
+
+	@Override
+	public void close() {
+		GL.get().deleteProgram(this.id);
 	}
 
 	public static void useNone() {
@@ -87,7 +88,7 @@ public record ShaderProgram(int id) {
 				GL.get().deleteProgram(id);
 
 				if (this.cleanup)
-					this.shaders.forEach(Shader::delete);
+					this.shaders.forEach(Shader::close);
 
 				return Result.fail(new LinkageError("Could not link shader program.", log));
 			}
@@ -95,7 +96,7 @@ public record ShaderProgram(int id) {
 			this.shaders.forEach(shader -> GL.get().detachShader(id, shader.id()));
 
 			if (this.cleanup)
-				this.shaders.forEach(Shader::delete);
+				this.shaders.forEach(Shader::close);
 
 			return Result.ok(new ShaderProgram(id));
 		}
