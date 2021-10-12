@@ -17,6 +17,8 @@
 
 package dev.lambdaurora.res_errare;
 
+import dev.lambdaurora.res_errare.render.Camera;
+import dev.lambdaurora.res_errare.render.GameRenderer;
 import dev.lambdaurora.res_errare.render.Skybox;
 import dev.lambdaurora.res_errare.render.shader.Shader;
 import dev.lambdaurora.res_errare.render.shader.ShaderProgram;
@@ -33,10 +35,14 @@ import java.io.IOException;
 public final class ResErrare {
 	public static void main(String[] args) throws IOException {
 		GLFW.init();
+		GLFW.windowHint(GLFW.CONTEXT_VERSION_MAJOR, 3);
+		GLFW.windowHint(GLFW.CONTEXT_VERSION_MINOR, 3);
+		GLFW.windowHint(GLFW.OPENGL_PROFILE, GLFW.OPENGL_CORE_PROFILE);
 
 		var window = Window.create(640, 480, "res_errare Test").orElseThrow();
 
 		window.makeContextCurrent();
+		GLFW.swapInterval(1);
 
 		var result = new ShaderProgram.Builder()
 				.shader(Shader.compile(ShaderType.FRAGMENT, new Identifier(Constants.NAMESPACE, "shader")))
@@ -47,6 +53,8 @@ public final class ResErrare {
 			throw result.getError();
 
 		var shader = result.get();
+
+		var renderer = new GameRenderer();
 
 		var skybox = Skybox.of(CubeMapTexture.builder()
 				.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_X, new Identifier(Constants.NAMESPACE, "textures/skybox/right.jpg"))
@@ -61,12 +69,18 @@ public final class ResErrare {
 		skybox.get().scale(50);
 
 		var framebuffer = window.getFramebufferSize();
-		GL.get().viewport(0, 0, framebuffer.width(), framebuffer.height());
+		renderer.setupProjection(framebuffer.width(), framebuffer.height());
+
+		var camera = new Camera();
+		camera.setPosition(0, 0, 3);
+		camera.setYaw(-90.f);
 
 		GL.get().enable(GL.GL11.CULL_FACE);
 		GL.get().enable(GL.GL11.DEPTH_TEST);
 
 		while (!window.shouldClose()) {
+			renderer.updateView(camera.getViewMatrix());
+
 			int color = getRainbowRGB(0, 0);
 			GL.get().clear(GL.GL11.COLOR_BUFFER_BIT | GL.GL11.DEPTH_BUFFER_BIT);
 			GL.get().clearColor(((color >> 16) & 255) / 255.f,

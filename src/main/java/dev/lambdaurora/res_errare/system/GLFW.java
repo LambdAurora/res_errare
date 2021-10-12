@@ -25,6 +25,11 @@ import java.util.Map;
 import java.util.function.Function;
 
 public final class GLFW {
+	public static final int CONTEXT_VERSION_MAJOR = 0x00022002;
+	public static final int CONTEXT_VERSION_MINOR = 0x00022003;
+	public static final int OPENGL_PROFILE = 0x00022008;
+	public static final int OPENGL_CORE_PROFILE = 0x00032001;
+
 	private static final Map<String, NativeFunction<?>> FUNCTIONS = new HashMap<>();
 
 	public static void init() {
@@ -48,6 +53,8 @@ public final class GLFW {
 		return (NativeFunction<T>) FUNCTIONS.computeIfAbsent(name, linker);
 	}
 
+	/* Context stuff */
+
 	public static MemoryAddress getProcAddress(String symbolName) {
 		try (var scope = ResourceScope.newConfinedScope()) {
 			return (MemoryAddress) getFunction("glfwGetProcAddress", name -> NativeFunction.of(name,
@@ -55,6 +62,29 @@ public final class GLFW {
 					.handle().invoke(CLinker.toCString(symbolName, scope).address());
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public static void swapInterval(int interval) {
+		try {
+			getFunction("glfwSwapInterval", name -> NativeFunction.of(name,
+					void.class, new Class[]{int.class}, FunctionDescriptor.ofVoid(CLinker.C_INT)))
+					.handle().invoke(interval);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	/* Window stuff */
+
+	public static void windowHint(int hint, int value) {
+		try {
+			getFunction("glfwWindowHint", name -> NativeFunction.of(name,
+					void.class, new Class[]{int.class, int.class},
+					FunctionDescriptor.ofVoid(CLinker.C_INT, CLinker.C_INT)
+			)).handle().invokeExact(hint, value);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException("Could not invoke function glfwWindowHint: ", e);
 		}
 	}
 

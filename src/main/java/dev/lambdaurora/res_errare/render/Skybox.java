@@ -18,12 +18,15 @@
 package dev.lambdaurora.res_errare.render;
 
 import dev.lambdaurora.res_errare.Constants;
+import dev.lambdaurora.res_errare.render.buffer.BufferTarget;
+import dev.lambdaurora.res_errare.render.buffer.GraphicsBuffer;
 import dev.lambdaurora.res_errare.render.shader.Shader;
 import dev.lambdaurora.res_errare.render.shader.ShaderProgram;
 import dev.lambdaurora.res_errare.render.shader.ShaderType;
 import dev.lambdaurora.res_errare.render.texture.CubeMapTexture;
 import dev.lambdaurora.res_errare.system.GL;
 import dev.lambdaurora.res_errare.util.Identifier;
+import dev.lambdaurora.res_errare.util.NativeSizes;
 import dev.lambdaurora.res_errare.util.Result;
 import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.MemoryAddress;
@@ -34,7 +37,7 @@ import jdk.incubator.foreign.MemoryAddress;
 public class Skybox implements AutoCloseable {
 	public static final Identifier SKYBOX_SHADER_ID = new Identifier(Constants.NAMESPACE, "skybox");
 	private static int skyboxVao;
-	private static int skyboxVbo;
+	private static GraphicsBuffer skyboxVbo;
 
 	private final CubeMapTexture texture;
 	private final ShaderProgram shader;
@@ -90,12 +93,11 @@ public class Skybox implements AutoCloseable {
 	private static void bindSkyboxVao() {
 		if (skyboxVao == 0) {
 			skyboxVao = GL.get().genVertexArrays(1)[0];
-			skyboxVbo = GL.get().genBuffers(1)[0];
 			GL.get().bindVertexArray(skyboxVao);
-			GL.get().bindBuffer(GL.GL15.ARRAY_BUFFER, skyboxVbo);
-			GL.get().bufferData(GL.GL15.ARRAY_BUFFER, VERTICES, GL.GL15.STATIC_DRAW);
+			skyboxVbo = GraphicsBuffer.ofStatic(BufferTarget.ARRAY, VERTICES);
 			GL.get().enableVertexAttribArray(0);
-			GL.get().vertexAttribPointer(0, 3, GL.GL11.FLOAT, false, CLinker.C_FLOAT.byteSize() * 3, MemoryAddress.NULL);
+			GL.get().vertexAttribPointer(0, 3, GL.GL11.FLOAT, false, NativeSizes.FLOAT_SIZE * 3, MemoryAddress.NULL);
+			skyboxVbo.unbind();
 		}
 
 		GL.get().bindVertexArray(skyboxVao);
@@ -103,8 +105,9 @@ public class Skybox implements AutoCloseable {
 
 	public static void terminate() {
 		GL.get().deleteVertexArrays(skyboxVao);
-		GL.get().deleteBuffers(skyboxVbo);
-		skyboxVao = skyboxVbo = 0;
+		skyboxVbo.close();
+		skyboxVao = 0;
+		skyboxVbo = null;
 	}
 
 	private static final float[] VERTICES = new float[]{

@@ -18,9 +18,12 @@
 package dev.lambdaurora.res_errare.system;
 
 import dev.lambdaurora.res_errare.render.GeometricPrimitive;
+import dev.lambdaurora.res_errare.render.buffer.BufferTarget;
+import dev.lambdaurora.res_errare.render.buffer.BufferUsage;
 import dev.lambdaurora.res_errare.render.shader.ShaderType;
 import dev.lambdaurora.res_errare.render.texture.Image;
 import dev.lambdaurora.res_errare.render.texture.TextureType;
+import dev.lambdaurora.res_errare.util.NativeSizes;
 import jdk.incubator.foreign.*;
 
 import java.lang.invoke.MethodHandle;
@@ -115,11 +118,11 @@ public final class GL {
 
 	/* 1.5 */
 
-	public void bindBuffer(int type, int vbo) {
+	public void bindBuffer(BufferTarget type, int vbo) {
 		try {
 			this.getFunction("glBindBuffer",
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
-			).invokeExact(type, vbo);
+			).invokeExact(type.glId(), vbo);
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
 		}
@@ -155,15 +158,41 @@ public final class GL {
 		}
 	}
 
-	public void bufferData(int type, float[] data, int usage) {
+	public void bufferData(BufferTarget type, float[] data, BufferUsage usage) {
 		try (var scope = ResourceScope.newConfinedScope()) {
 			var allocator = SegmentAllocator.ofScope(scope);
 
 			var cData = allocator.allocateArray(CLinker.C_FLOAT, data);
 
+			bufferData(type, NativeSizes.sizeof(data), cData.address(), usage);
+		}
+	}
+
+	public void bufferData(BufferTarget type, long size, MemoryAddress dataAddress, BufferUsage usage) {
+		try {
 			this.getFunction("glBufferData",
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, long.class, MemoryAddress.class, int.class)
-			).invokeExact(type, (long) data.length * CLinker.C_FLOAT.byteSize(), cData.address(), usage);
+			).invokeExact(type.glId(), size, dataAddress, usage.glId());
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void bufferSubData(BufferTarget type, long offset, float[] data) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			var cData = allocator.allocateArray(CLinker.C_FLOAT, data);
+
+			bufferSubData(type, offset, NativeSizes.sizeof(data), cData.address());
+		}
+	}
+
+	public void bufferSubData(BufferTarget type, long offset, long size, MemoryAddress dataAddress) {
+		try {
+			this.getFunction("glBufferSubData",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, long.class, long.class, MemoryAddress.class)
+			).invokeExact(type.glId(), offset, size, dataAddress);
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
 		}
@@ -464,6 +493,16 @@ public final class GL {
 		}
 	}
 
+	public void bindBufferRange(BufferTarget target, int index, int buffer, long offset, long size) {
+		try {
+			this.getFunction("glBindBufferRange",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, long.class, long.class)
+			).invokeExact(target.glId(), index, buffer, offset, size);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
 	@FunctionalInterface
 	public interface FunctionFetcher {
 		MemoryAddress fetch(String name);
@@ -483,11 +522,6 @@ public final class GL {
 
 	public static final class GL13 {
 		public static final int TEXTURE0 = 0x84c0;
-	}
-
-	public static final class GL15 {
-		public static final int ARRAY_BUFFER = 0x8892;
-		public static final int STATIC_DRAW = 0x88e4;
 	}
 
 	public static final class GL20 {
