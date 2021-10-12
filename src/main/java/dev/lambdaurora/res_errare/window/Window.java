@@ -18,8 +18,12 @@
 package dev.lambdaurora.res_errare.window;
 
 import dev.lambdaurora.res_errare.system.GLFW;
+import dev.lambdaurora.res_errare.system.callback.GLFWKeyCallback;
 import dev.lambdaurora.res_errare.util.math.Dimensions2D;
+import jdk.incubator.foreign.CLinker;
+import jdk.incubator.foreign.FunctionDescriptor;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.ResourceScope;
 
 import java.util.Optional;
 
@@ -28,6 +32,7 @@ import java.util.Optional;
  */
 public class Window {
 	private final MemoryAddress handle;
+	private MemoryAddress currentKeyCallback = MemoryAddress.NULL;
 
 	public Window(MemoryAddress handle) {
 		this.handle = handle;
@@ -52,10 +57,33 @@ public class Window {
 
 	public void destroy() {
 		GLFW.destroyWindow(this.handle);
+		freeIfNeeded(this.currentKeyCallback);
 	}
 
 	public Dimensions2D getFramebufferSize() {
 		return GLFW.getFramebufferSize(this.handle);
+	}
+
+	public void setFramebufferSizeCallback(FramebufferSizeCallback callback) {
+		GLFW.setFramebufferSizeCallback(this.handle, (window, width, height) -> callback.onSetFramebufferSize(width, height));
+	}
+
+	public void setKeyCallback(KeyCallback callback) {
+		freeIfNeeded(this.currentKeyCallback);
+
+		this.currentKeyCallback = CLinker.getInstance().upcallStub(
+				GLFWKeyCallback.HANDLE.bindTo((GLFWKeyCallback) (window, key, scancode, action, mods)
+						-> callback.onKey(key, scancode, action, mods)),
+				FunctionDescriptor.ofVoid(CLinker.C_POINTER, CLinker.C_INT, CLinker.C_INT, CLinker.C_INT, CLinker.C_INT),
+				ResourceScope.globalScope()
+		);
+
+		GLFW.setKeyCallback(this.handle, this.currentKeyCallback);
+	}
+
+	private static void freeIfNeeded(MemoryAddress address) {
+		if (address != MemoryAddress.NULL)
+			CLinker.freeMemory(address);
 	}
 
 	public static Optional<Window> create(int width, int height, String title) {
@@ -64,5 +92,15 @@ public class Window {
 			return Optional.empty();
 
 		return Optional.of(new Window(handle));
+	}
+
+	@FunctionalInterface
+	public interface FramebufferSizeCallback {
+		void onSetFramebufferSize(int width, int height);
+	}
+
+	@FunctionalInterface
+	public interface KeyCallback {
+		void onKey(int key, int scancode, int action, int mods);
 	}
 }

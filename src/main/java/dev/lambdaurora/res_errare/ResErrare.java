@@ -33,28 +33,19 @@ import java.awt.*;
 import java.io.IOException;
 
 public final class ResErrare {
-	public static void main(String[] args) throws IOException {
-		GLFW.init();
-		GLFW.windowHint(GLFW.CONTEXT_VERSION_MAJOR, 3);
-		GLFW.windowHint(GLFW.CONTEXT_VERSION_MINOR, 3);
-		GLFW.windowHint(GLFW.OPENGL_PROFILE, GLFW.OPENGL_CORE_PROFILE);
+	private Window window;
+	private boolean running = true;
+	private Camera camera = new Camera();
+	private GameRenderer renderer;
+	private Skybox skybox;
 
-		var window = Window.create(640, 480, "res_errare Test").orElseThrow();
+	public ResErrare(String title) throws IOException {
+		this.window = Window.create(640, 480, title).orElseThrow();
 
-		window.makeContextCurrent();
+		this.window.makeContextCurrent();
 		GLFW.swapInterval(1);
 
-		var result = new ShaderProgram.Builder()
-				.shader(Shader.compile(ShaderType.FRAGMENT, new Identifier(Constants.NAMESPACE, "shader")))
-				.shader(Shader.compile(ShaderType.VERTEX, new Identifier(Constants.NAMESPACE, "shader")))
-				.withCleanup()
-				.build();
-		if (result.hasError())
-			throw result.getError();
-
-		var shader = result.get();
-
-		var renderer = new GameRenderer();
+		this.renderer = new GameRenderer();
 
 		var skybox = Skybox.of(CubeMapTexture.builder()
 				.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_X, new Identifier(Constants.NAMESPACE, "textures/skybox/right.jpg"))
@@ -66,36 +57,71 @@ public final class ResErrare {
 				.build());
 		if (skybox.hasError())
 			throw skybox.getError();
-		skybox.get().scale(50);
+		this.skybox = skybox.get();
+		this.skybox.scale(50.f);
 
-		var framebuffer = window.getFramebufferSize();
-		renderer.setupProjection(framebuffer.width(), framebuffer.height());
+		this.init();
+	}
 
-		var camera = new Camera();
-		camera.setPosition(0, 0, 3);
-		camera.setYaw(-90.f);
+	private void init() {
+		this.window.setFramebufferSizeCallback(this.renderer::setupProjection);
+		this.window.setKeyCallback((key, scancode, action, mods) -> {
+			if (action == 1 && key == 256)
+				this.running = false;
+		});
 
+		this.camera.setPosition(0, 0, 3);
+		this.camera.setYaw(-90.f);
+	}
+
+	public void run() {
 		GL.get().enable(GL.GL11.CULL_FACE);
 		GL.get().enable(GL.GL11.DEPTH_TEST);
 
-		while (!window.shouldClose()) {
-			renderer.updateView(camera.getViewMatrix());
+		while (this.running) {
+			this.renderer.updateView(this.camera.getViewMatrix());
 
-			int color = getRainbowRGB(0, 0);
-			GL.get().clear(GL.GL11.COLOR_BUFFER_BIT | GL.GL11.DEPTH_BUFFER_BIT);
-			GL.get().clearColor(((color >> 16) & 255) / 255.f,
-					((color >> 8) & 255) / 255.f,
-					(color & 255) / 255.f,
-					1.f);
-
-			skybox.get().draw();
+			this.render();
 
 			GLFW.pollEvents();
-			window.swapBuffers();
+			this.window.swapBuffers();
+			this.running &= !this.window.shouldClose();
 		}
+	}
+
+	public static void main(String[] args) throws IOException {
+		GLFW.init();
+		GLFW.windowHint(GLFW.CONTEXT_VERSION_MAJOR, 3);
+		GLFW.windowHint(GLFW.CONTEXT_VERSION_MINOR, 3);
+		GLFW.windowHint(GLFW.OPENGL_PROFILE, GLFW.OPENGL_CORE_PROFILE);
+
+		var game = new ResErrare("res_errare Test");
+
+		var result = new ShaderProgram.Builder()
+				.shader(Shader.compile(ShaderType.FRAGMENT, new Identifier(Constants.NAMESPACE, "shader")))
+				.shader(Shader.compile(ShaderType.VERTEX, new Identifier(Constants.NAMESPACE, "shader")))
+				.withCleanup()
+				.build();
+		if (result.hasError())
+			throw result.getError();
+
+		var shader = result.get();
+
+		game.run();
 
 		shader.close();
 		terminate();
+	}
+
+	public void render() {
+		int color = getRainbowRGB(0, 0);
+		GL.get().clear(GL.GL11.COLOR_BUFFER_BIT | GL.GL11.DEPTH_BUFFER_BIT);
+		GL.get().clearColor(((color >> 16) & 255) / 255.f,
+				((color >> 8) & 255) / 255.f,
+				(color & 255) / 255.f,
+				1.f);
+
+		this.skybox.draw();
 	}
 
 	public static void terminate() {

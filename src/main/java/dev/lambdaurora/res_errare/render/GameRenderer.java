@@ -48,7 +48,7 @@ public class GameRenderer implements AutoCloseable {
 	}
 
 	private void updatePerspective(int width, int height) {
-		this.projection = projection.perspective((float) Math.toRadians(75), (float) width / height, NEAR, FAR);
+		this.projection = projection.setPerspective((float) Math.toRadians(75), (float) width / height, NEAR, FAR);
 		this.ubo.bind();
 		this.ubo.layout().<Matrix4f>get(0).set(this.ubo, this.projection);
 		this.ubo.unbind();

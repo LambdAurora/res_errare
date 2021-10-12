@@ -247,7 +247,7 @@ public final class GL {
 			this.getFunction("glTexImage2D",
 							address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, int.class,
 									int.class, int.class, int.class, int.class, MemoryAddress.class))
-					.invokeExact(target.glId(), level, internalFormat, image.width(), image.height(), 0, image.format().glId(), GL11.UNSIGNED_BYTE, imgData);
+					.invokeExact(target.glId(), level, internalFormat, image.width(), image.height(), 0, image.format().glFormatId(), GL11.UNSIGNED_BYTE, imgData);
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
 		}

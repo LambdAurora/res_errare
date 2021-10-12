@@ -17,6 +17,7 @@
 
 package dev.lambdaurora.res_errare.system;
 
+import dev.lambdaurora.res_errare.system.callback.GLFWFramebufferSizeCallback;
 import dev.lambdaurora.res_errare.util.math.Dimensions2D;
 import jdk.incubator.foreign.*;
 
@@ -31,6 +32,8 @@ public final class GLFW {
 	public static final int OPENGL_CORE_PROFILE = 0x00032001;
 
 	private static final Map<String, NativeFunction<?>> FUNCTIONS = new HashMap<>();
+	// @TODO this is very stupid, needs to be stored with the window directly
+	private static MemoryAddress currentFramebufferSizeCallback = MemoryAddress.NULL;
 
 	public static void init() {
 		LibraryLoader.loadLibrary("glfw");
@@ -150,11 +153,45 @@ public final class GLFW {
 		}
 	}
 
+	public static void setFramebufferSizeCallback(MemoryAddress window, GLFWFramebufferSizeCallback callback) {
+		try {
+			if (currentFramebufferSizeCallback != MemoryAddress.NULL) {
+				CLinker.freeMemory(currentFramebufferSizeCallback);
+			}
+
+			currentFramebufferSizeCallback = CLinker.getInstance().upcallStub(
+					GLFWFramebufferSizeCallback.HANDLE.bindTo(callback),
+					FunctionDescriptor.ofVoid(CLinker.C_POINTER, CLinker.C_INT, CLinker.C_INT),
+					ResourceScope.globalScope()
+			);
+
+			getFunction("glfwSetFramebufferSizeCallback", name -> NativeFunction.of(name, void.class,
+					new Class[]{MemoryAddress.class, MemoryAddress.class},
+					FunctionDescriptor.ofVoid(CLinker.C_POINTER, CLinker.C_POINTER)))
+					.handle().invoke(window, currentFramebufferSizeCallback);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
 	public static void swapBuffers(MemoryAddress window) {
 		try {
 			getFunction("glfwSwapBuffers", name -> NativeFunction.of(name,
 					void.class, new Class[]{MemoryAddress.class}, FunctionDescriptor.ofVoid(CLinker.C_POINTER)))
 					.handle().invoke(window);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	/* Input stuff */
+
+	public static void setKeyCallback(MemoryAddress window, MemoryAddress callback) {
+		try {
+			getFunction("glfwSetKeyCallback", name -> NativeFunction.of(name, void.class,
+					new Class[]{MemoryAddress.class, MemoryAddress.class},
+					FunctionDescriptor.ofVoid(CLinker.C_POINTER, CLinker.C_POINTER)))
+					.handle().invoke(window, callback);
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
 		}

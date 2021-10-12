@@ -105,8 +105,8 @@ public class Camera {
 
 		this.front = front.normalize();
 		// Also, re-calculate the right and up vector.
-		this.right = this.front.cross(this.worldUp).normalize(); // Normalize the vectors,
+		this.right = new Vector3f(this.front).cross(this.worldUp).normalize(); // Normalize the vectors,
 		// because their length gets closer to 0 the more you look up or down which results in slower movement.
-		this.up = this.right.cross(this.front).normalize();
+		this.up = new Vector3f(this.right).cross(this.front).normalize();
 	}
 }

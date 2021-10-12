@@ -35,28 +35,36 @@ public interface Image extends AutoCloseable {
 
 	enum Format {
 		RED(1, 0x1903),
-		GREEN(1, 0x1904),
-		BLUE(1, 0x1905),
-		RGB(3, 0x80e0),
+		RGB(3, 0x80e0, 0x1907),
 		/**
 		 * ARGB is only true in Java due to its big-endianness, for OpenGL it'll be BGRA.
 		 */
-		ARGB(4, 0x80e1);
+		ARGB(4, 0x80e1, 0x1908);
 
 		private final int channelCount;
-		private final int glId;
+		private final int glFormatId;
+		private final int glInternalId;
 
 		Format(int channelCount, int glId) {
+			this(channelCount, glId, glId);
+		}
+
+		Format(int channelCount, int glFormatId, int glInternalId) {
 			this.channelCount = channelCount;
-			this.glId = glId;
+			this.glFormatId = glFormatId;
+			this.glInternalId = glInternalId;
 		}
 
 		public int channelCount() {
 			return this.channelCount;
 		}
 
-		public int glId() {
-			return this.glId;
+		public int glFormatId() {
+			return this.glFormatId;
+		}
+
+		public int glInternalFormatId() {
+			return this.glInternalId;
 		}
 	}
 }

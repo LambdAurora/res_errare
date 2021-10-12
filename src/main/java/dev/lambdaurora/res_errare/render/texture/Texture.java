@@ -55,7 +55,7 @@ public interface Texture<T extends OpenGLIdProvider> extends AutoCloseable {
 	 * @param image the image to upload
 	 */
 	default void upload(T target, int level, Image image) {
-		GL.get().texImage2D(target, level, Image.Format.ARGB.glId(), image);
+		GL.get().texImage2D(target, level, Image.Format.ARGB.glInternalFormatId(), image);
 	}
 
 	default <V> void setParameter(TextureParameter<V> parameter, V value) {
