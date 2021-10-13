@@ -26,6 +26,7 @@ public class Camera {
 	private Vector3f up;
 	private Vector3f right;
 	private Vector3f worldUp;
+	private final Matrix4f viewMatrix = new Matrix4f();
 
 	private float yaw;
 	private float pitch;
@@ -90,11 +91,11 @@ public class Camera {
 	}
 
 	public Matrix4f getViewMatrix() {
-		return new Matrix4f().lookAt(this.position, this.front, this.up);
+		return this.viewMatrix.setLookAt(this.position, this.front, this.up);
 	}
 
 	/**
-	 * Calculates the front vector from the Camera's (updated) Eular Angles.
+	 * Calculates the front vector from the Camera's (updated) Euler Angles.
 	 */
 	private void updateCameraVectors() {
 		// Calculate the new front vector.

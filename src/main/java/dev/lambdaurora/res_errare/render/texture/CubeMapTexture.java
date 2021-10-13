@@ -94,6 +94,19 @@ public final class CubeMapTexture implements Texture<CubeMapTexture.CubeMapTextu
 			return this.face(target, NativeImage.load(imageId, Image.Format.ARGB));
 		}
 
+		public Builder facesFromDirectory(Identifier directory) throws IOException {
+			return this.facesFromDirectory(directory, "png");
+		}
+
+		public Builder facesFromDirectory(Identifier directory, String extension) throws IOException {
+			return this.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_X, directory.sub("right." + extension))
+					.face(CubeMapTexture.CubeMapTextureTarget.NEGATIVE_X, directory.sub("left." + extension))
+					.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_Y, directory.sub("top." + extension))
+					.face(CubeMapTexture.CubeMapTextureTarget.NEGATIVE_Y, directory.sub("bottom." + extension))
+					.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_Z, directory.sub("front." + extension))
+					.face(CubeMapTexture.CubeMapTextureTarget.NEGATIVE_Z, directory.sub("back." + extension));
+		}
+
 		public <V> Builder parameter(TextureParameter<V> parameter, V value) {
 			this.parameters.put(parameter, value);
 			return this;

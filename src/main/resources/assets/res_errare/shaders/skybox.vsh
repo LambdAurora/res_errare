@@ -10,9 +10,9 @@ uniform float scale = 1.f;
 
 out vec3 texture_coords;
 
-void main()
-{
+void main() {
     texture_coords = aPos;
-    vec4 pos = projection * view * vec4(aPos * scale, 1.0);
+    // We need to remove the translation off of the view matrix.
+    vec4 pos = projection * mat4(mat3(view)) * vec4(aPos * scale, 1.0);
     gl_Position = pos.xyww;
 }

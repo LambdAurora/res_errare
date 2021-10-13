@@ -28,7 +28,6 @@ import dev.lambdaurora.res_errare.system.GL;
 import dev.lambdaurora.res_errare.util.Identifier;
 import dev.lambdaurora.res_errare.util.NativeSizes;
 import dev.lambdaurora.res_errare.util.Result;
-import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.MemoryAddress;
 
 /**
@@ -79,7 +78,7 @@ public class Skybox implements AutoCloseable {
 		bindSkyboxVao();
 		GL.get().activeTexture(GL.GL13.TEXTURE0);
 		this.texture.bind();
-		GL.get().drawArrays(GeometricPrimitive.TRIANGLES, 0, 36);
+		GL.get().drawArrays(GeometricPrimitive.TRIANGLE_STRIP, 0, VERTICES.length / 3);
 		GL.get().bindVertexArray(0);
 		GL.get().depthFunc(GL.GL11.LESS);
 	}
@@ -112,41 +111,31 @@ public class Skybox implements AutoCloseable {
 
 	private static final float[] VERTICES = new float[]{
 			// Positions
-			-1.f, 1.f, -1.f,
-			-1.f, -1.f, -1.f,
-			1.f, -1.f, -1.f,
-			1.f, -1.f, -1.f,
-			1.f, 1.f, -1.f,
-			-1.f, 1.f, -1.f,
+			// 1. Quad (complete)
 			-1.f, -1.f, 1.f,
 			-1.f, -1.f, -1.f,
-			-1.f, 1.f, -1.f,
-			-1.f, 1.f, -1.f,
 			-1.f, 1.f, 1.f,
-			-1.f, -1.f, 1.f,
-			1.f, -1.f, -1.f,
+			-1.f, 1.f, -1.f,
+			// 2. Quad
+			1.f, 1.f, 1.f,
+			1.f, 1.f, -1.f,
+			// 3. Quad
 			1.f, -1.f, 1.f,
-			1.f, 1.f, 1.f,
-			1.f, 1.f, 1.f,
-			1.f, 1.f, -1.f,
 			1.f, -1.f, -1.f,
-			-1.f, -1.f, 1.f,
-			-1.f, 1.f, 1.f,
-			1.f, 1.f, 1.f,
-			1.f, 1.f, 1.f,
+			// | Loop 1 to stop rendering
+			1.f, -1.f, -1.f,
+			1.f, 1.f, -1.f,
+			// | Loop 2 to reposition new start point
+			// | 4. Quad (complete)
+			1.f, 1.f, -1.f,
+			-1.f, 1.f, -1.f,
+			1.f, -1.f, -1.f,
+			-1.f, -1.f, -1.f,
+			// 5. Quad
 			1.f, -1.f, 1.f,
 			-1.f, -1.f, 1.f,
-			-1.f, 1.f, -1.f,
-			1.f, 1.f, -1.f,
-			1.f, 1.f, 1.f,
+			// 6. Quad
 			1.f, 1.f, 1.f,
 			-1.f, 1.f, 1.f,
-			-1.f, 1.f, -1.f,
-			-1.f, -1.f, -1.f,
-			-1.f, -1.f, 1.f,
-			1.f, -1.f, -1.f,
-			1.f, -1.f, -1.f,
-			-1.f, -1.f, 1.f,
-			1.f, -1.f, 1.f
 	};
 }

@@ -84,6 +84,10 @@ public final class GL {
 		voidCallInt("glDepthFunc", func);
 	}
 
+	public void depthMask(boolean mask) {
+		voidCallInt("glDepthMask", mask ? 1 : 0);
+	}
+
 	public void drawArrays(GeometricPrimitive mode, int first, int count) {
 		try {
 			this.getFunction("glDrawArrays", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class))
@@ -99,6 +103,15 @@ public final class GL {
 
 	public void disable(int capability) {
 		voidCallInt("glDisable", capability);
+	}
+
+	public void polygonMode(int face, int mode) {
+		try {
+			this.getFunction("glPolygonMode", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class))
+					.invokeExact(face, mode);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
 	}
 
 	public void viewport(int x, int y, int width, int height) {
@@ -513,11 +526,14 @@ public final class GL {
 		public static final int LESS = 0x0201;
 		public static final int EQUAL = 0x0202;
 		public static final int LEQUAL = 0x0203;
+		public static final int FRONT_AND_BACK = 0x0408;
 		public static final int CULL_FACE = 0x0b44;
 		public static final int DEPTH_TEST = 0x0b71;
 		public static final int COLOR_BUFFER_BIT = 0x4000;
 		public static final int UNSIGNED_BYTE = 0x1401;
 		public static final int FLOAT = 0x1406;
+		public static final int LINE = 0x1b01;
+		public static final int FILL = 0x1b02;
 	}
 
 	public static final class GL13 {

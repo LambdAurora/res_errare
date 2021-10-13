@@ -35,6 +35,7 @@ import java.io.IOException;
 public final class ResErrare {
 	private Window window;
 	private boolean running = true;
+	private boolean wireframe = false;
 	private Camera camera = new Camera();
 	private GameRenderer renderer;
 	private Skybox skybox;
@@ -48,12 +49,7 @@ public final class ResErrare {
 		this.renderer = new GameRenderer();
 
 		var skybox = Skybox.of(CubeMapTexture.builder()
-				.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_X, new Identifier(Constants.NAMESPACE, "textures/skybox/right.jpg"))
-				.face(CubeMapTexture.CubeMapTextureTarget.NEGATIVE_X, new Identifier(Constants.NAMESPACE, "textures/skybox/left.jpg"))
-				.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_Y, new Identifier(Constants.NAMESPACE, "textures/skybox/top.jpg"))
-				.face(CubeMapTexture.CubeMapTextureTarget.NEGATIVE_Y, new Identifier(Constants.NAMESPACE, "textures/skybox/bottom.jpg"))
-				.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_Z, new Identifier(Constants.NAMESPACE, "textures/skybox/back.jpg"))
-				.face(CubeMapTexture.CubeMapTextureTarget.NEGATIVE_Z, new Identifier(Constants.NAMESPACE, "textures/skybox/front.jpg"))
+				.facesFromDirectory(new Identifier(Constants.NAMESPACE, "textures/skybox"), "jpg")
 				.build());
 		if (skybox.hasError())
 			throw skybox.getError();
@@ -66,8 +62,15 @@ public final class ResErrare {
 	private void init() {
 		this.window.setFramebufferSizeCallback(this.renderer::setupProjection);
 		this.window.setKeyCallback((key, scancode, action, mods) -> {
-			if (action == 1 && key == 256)
-				this.running = false;
+			if (action == 0) {
+				switch (key) {
+					case 256 -> this.running = false;
+					case 257 -> {
+						this.wireframe = !this.wireframe;
+						GL.get().polygonMode(GL.GL11.FRONT_AND_BACK, this.wireframe ? GL.GL11.LINE : GL.GL11.FILL);
+					}
+				}
+			}
 		});
 
 		this.camera.setPosition(0, 0, 3);
@@ -79,6 +82,9 @@ public final class ResErrare {
 		GL.get().enable(GL.GL11.DEPTH_TEST);
 
 		while (this.running) {
+			float newYaw = this.camera.getYaw() + 1f;
+			this.camera.setYaw(newYaw);
+
 			this.renderer.updateView(this.camera.getViewMatrix());
 
 			this.render();
@@ -114,12 +120,8 @@ public final class ResErrare {
 	}
 
 	public void render() {
-		int color = getRainbowRGB(0, 0);
 		GL.get().clear(GL.GL11.COLOR_BUFFER_BIT | GL.GL11.DEPTH_BUFFER_BIT);
-		GL.get().clearColor(((color >> 16) & 255) / 255.f,
-				((color >> 8) & 255) / 255.f,
-				(color & 255) / 255.f,
-				1.f);
+		GL.get().clearColor(0.f, 0.f, 0.f, 1.f);
 
 		this.skybox.draw();
 	}
