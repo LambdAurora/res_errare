@@ -29,8 +29,9 @@ public class GameRenderer implements AutoCloseable {
 	private static final float FAR = 100.f;
 
 	private final GraphicsBuffer ubo = GraphicsBuffer.of(BufferTarget.UNIFORM, BufferUsage.STREAM_DRAW, BufferLayout.builder()
-			.addMatrix4fRange()
-			.addMatrix4fRange()
+			.addMatrix4fRange() // Projection
+			.addMatrix4fRange() // View
+			.addMatrix4fRange() // Ortho
 			.build()
 	);
 	private Matrix4f projection = new Matrix4f().identity();
@@ -49,15 +50,16 @@ public class GameRenderer implements AutoCloseable {
 
 	private void updatePerspective(int width, int height) {
 		this.projection = projection.setPerspective((float) Math.toRadians(75), (float) width / height, NEAR, FAR);
-		this.ubo.bind();
 		this.ubo.layout().<Matrix4f>get(0).set(this.ubo, this.projection);
-		this.ubo.unbind();
 	}
 
 	public void setupProjection(int width, int height) {
 		GL.get().viewport(0, 0, width, height);
+		this.ubo.bind();
 		this.updatePerspective(width, height);
 		this.ortho = this.ortho.ortho(0.f, width, height, 0.f, 0.f, 1.f);
+		this.ubo.layout().<Matrix4f>get(2).set(this.ubo, this.ortho);
+		this.ubo.unbind();
 	}
 
 	public void updateView(Matrix4f view) {

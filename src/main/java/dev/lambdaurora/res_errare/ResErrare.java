@@ -46,10 +46,13 @@ public final class ResErrare {
 		this.window.makeContextCurrent();
 		GLFW.swapInterval(1);
 
+		System.out.println("Using: " + GL.get().getString(GL.GL11.RENDERER));
+
 		this.renderer = new GameRenderer();
 
 		var skybox = Skybox.of(CubeMapTexture.builder()
 				.facesFromDirectory(new Identifier(Constants.NAMESPACE, "textures/skybox"), "jpg")
+				.withCleanup()
 				.build());
 		if (skybox.hasError())
 			throw skybox.getError();
@@ -74,16 +77,19 @@ public final class ResErrare {
 		});
 
 		this.camera.setPosition(0, 0, 3);
-		this.camera.setYaw(-90.f);
 	}
 
 	public void run() {
 		GL.get().enable(GL.GL11.CULL_FACE);
 		GL.get().enable(GL.GL11.DEPTH_TEST);
 
+		boolean direction = true;
 		while (this.running) {
-			float newYaw = this.camera.getYaw() + 1f;
-			this.camera.setYaw(newYaw);
+			float newYaw = this.camera.getYaw() + .5f;
+			float newPitch = this.camera.getPitch() + (direction ? 1 : -1) * .25f;
+			if (newPitch > 89) direction = false;
+			else if (newPitch < -89) direction = true;
+			this.camera.setAngles(newYaw, newPitch);
 
 			this.renderer.updateView(this.camera.getViewMatrix());
 

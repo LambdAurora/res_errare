@@ -10,8 +10,8 @@ uniform sampler2D texture_normal1;
 uniform sampler2D texture_specular1;
 
 void main() {
-    vec4 texture_color = texture(texture_diffuse1, texture_coords);
-    if (texture_color.a < 0.1)
-        discard;
-    FragColor = texture_color;
+	vec4 texture_color = texture(texture_diffuse1, texture_coords);
+	if (texture_color.a < 0.1)
+		discard;
+	FragColor = texture_color;
 }

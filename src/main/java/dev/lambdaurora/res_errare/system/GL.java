@@ -105,6 +105,18 @@ public final class GL {
 		voidCallInt("glDisable", capability);
 	}
 
+	public String getString(int name) {
+		try {
+			var res = (MemoryAddress) this.getFunction("glGetString",
+							address -> LibraryLoader.getFunctionHandle(address, MemoryAddress.class, int.class))
+					.invokeExact(name);
+
+			return CLinker.toJavaString(res);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
 	public void polygonMode(int face, int mode) {
 		try {
 			this.getFunction("glPolygonMode", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class))
@@ -534,6 +546,8 @@ public final class GL {
 		public static final int FLOAT = 0x1406;
 		public static final int LINE = 0x1b01;
 		public static final int FILL = 0x1b02;
+		public static final int VENDOR = 0x1f00;
+		public static final int RENDERER = 0x1f01;
 	}
 
 	public static final class GL13 {

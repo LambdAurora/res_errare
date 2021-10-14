@@ -91,7 +91,11 @@ public class Camera {
 	}
 
 	public Matrix4f getViewMatrix() {
-		return this.viewMatrix.setLookAt(this.position, new Vector3f(this.position).add(this.front), this.up);
+		return this.viewMatrix.setLookAt(
+				this.position.x(), this.position.y(), this.position.z(),
+				this.position.x() + this.front.x(), this.position.y() + this.front.y(), this.position.z() + this.front.z(),
+				this.up.x(), this.up.y(), this.up.z()
+		);
 	}
 
 	/**

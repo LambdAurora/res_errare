@@ -76,6 +76,7 @@ public final class CubeMapTexture implements Texture<CubeMapTexture.CubeMapTextu
 	public static final class Builder {
 		private final Map<CubeMapTextureTarget, Image> faces = new EnumMap<>(CubeMapTextureTarget.class);
 		private final Map<TextureParameter<?>, Object> parameters = new Object2ObjectOpenHashMap<>();
+		private boolean cleanup = false;
 
 		private Builder() {
 			this.parameter(TextureParameters.MAG_FILTER, TextureParameters.FilterValue.LINEAR)
@@ -99,16 +100,21 @@ public final class CubeMapTexture implements Texture<CubeMapTexture.CubeMapTextu
 		}
 
 		public Builder facesFromDirectory(Identifier directory, String extension) throws IOException {
-			return this.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_X, directory.sub("right." + extension))
-					.face(CubeMapTexture.CubeMapTextureTarget.NEGATIVE_X, directory.sub("left." + extension))
-					.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_Y, directory.sub("top." + extension))
-					.face(CubeMapTexture.CubeMapTextureTarget.NEGATIVE_Y, directory.sub("bottom." + extension))
-					.face(CubeMapTexture.CubeMapTextureTarget.POSITIVE_Z, directory.sub("front." + extension))
-					.face(CubeMapTexture.CubeMapTextureTarget.NEGATIVE_Z, directory.sub("back." + extension));
+			return this.face(CubeMapTextureTarget.POSITIVE_X, directory.sub("right." + extension))
+					.face(CubeMapTextureTarget.NEGATIVE_X, directory.sub("left." + extension))
+					.face(CubeMapTextureTarget.POSITIVE_Y, directory.sub("top." + extension))
+					.face(CubeMapTextureTarget.NEGATIVE_Y, directory.sub("bottom." + extension))
+					.face(CubeMapTextureTarget.POSITIVE_Z, directory.sub("back." + extension))
+					.face(CubeMapTextureTarget.NEGATIVE_Z, directory.sub("front." + extension));
 		}
 
 		public <V> Builder parameter(TextureParameter<V> parameter, V value) {
 			this.parameters.put(parameter, value);
+			return this;
+		}
+
+		public Builder withCleanup() {
+			this.cleanup = true;
 			return this;
 		}
 
@@ -125,6 +131,15 @@ public final class CubeMapTexture implements Texture<CubeMapTexture.CubeMapTextu
 
 			for (var entry : this.faces.entrySet()) {
 				texture.upload(entry.getKey(), 0, entry.getValue());
+
+				if (this.cleanup) {
+					try {
+						entry.getValue().close();
+					} catch (Exception e) {
+						System.err.println("Could not close image for target " + entry.getKey() + ".");
+						e.printStackTrace();
+					}
+				}
 			}
 
 			texture.unbind();
