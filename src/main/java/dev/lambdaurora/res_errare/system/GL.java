@@ -20,11 +20,13 @@ package dev.lambdaurora.res_errare.system;
 import dev.lambdaurora.res_errare.render.GeometricPrimitive;
 import dev.lambdaurora.res_errare.render.buffer.BufferTarget;
 import dev.lambdaurora.res_errare.render.buffer.BufferUsage;
+import dev.lambdaurora.res_errare.render.buffer.range.Matrix4fBufferRange;
 import dev.lambdaurora.res_errare.render.shader.ShaderType;
 import dev.lambdaurora.res_errare.render.texture.Image;
 import dev.lambdaurora.res_errare.render.texture.TextureType;
 import dev.lambdaurora.res_errare.util.NativeSizes;
 import jdk.incubator.foreign.*;
+import org.joml.Matrix4f;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
@@ -463,6 +465,18 @@ public final class GL {
 			this.getFunction("glUniform1f",
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, float.class)
 			).invokeExact(location, value);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void uniformMatrix4fv(int location, boolean transpose, Matrix4f value) {
+		try (var scope = ResourceScope.newConfinedScope()) {
+			var allocator = SegmentAllocator.ofScope(scope);
+
+			this.getFunction("glUniformMatrix4fv",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, MemoryAddress.class)
+			).invokeExact(location, 1, transpose ? 1 : 0, Matrix4fBufferRange.NO_OFFSET.createSegment(allocator, value).address());
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
 		}

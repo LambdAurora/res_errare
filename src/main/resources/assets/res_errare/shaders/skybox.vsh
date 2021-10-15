@@ -1,14 +1,14 @@
 #version 330 core
 layout (location = 0) in vec3 aPos;
 
+out vec3 texture_coords;
+
 layout (std140) uniform matrices {
 	mat4 projection;
 	mat4 view;
 };
 
 uniform float scale = 1.f;
-
-out vec3 texture_coords;
 
 void main() {
 	texture_coords = vec3(aPos.xy, -aPos.z);

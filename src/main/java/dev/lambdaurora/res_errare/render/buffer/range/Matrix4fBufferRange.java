@@ -26,6 +26,8 @@ import org.joml.Matrix4f;
 import java.io.IOException;
 
 public class Matrix4fBufferRange extends BufferRange<Matrix4f> {
+	public static final Matrix4fBufferRange NO_OFFSET = new Matrix4fBufferRange(0);
+
 	public Matrix4fBufferRange(long offset) {
 		super(offset, NativeSizes.MATRIX4F_SIZE);
 	}

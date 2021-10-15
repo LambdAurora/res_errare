@@ -7,10 +7,12 @@ layout (std140) uniform matrices {
 	mat4 ortho;
 };
 
+uniform int heightmap[];
+uniform int colormap[];
 uniform int screen_width;
 uniform float scale = 1.f;
 
-layout (lines, max_vertices = 2) out;
+layout (line_strip, max_vertices = 2) out;
 
 void draw_vertical_line(int x, float y0, float y1, vec3 color) {
 	gl_Position = vec4(x, y0, 0, 0);
@@ -18,6 +20,14 @@ void draw_vertical_line(int x, float y0, float y1, vec3 color) {
 	gl_Position = vec4(x, y1, 0, 0);
 	EmitVertex();
 	EndPrimitive();
+}
+
+int get_index(vec2 point) {
+	int size = sqrt(heightmap.length());
+	int x = int(point.x) % size;
+	int y = int(point.y) % size;
+
+	return x * (size * y) + x;
 }
 
 void render(vec2 position, float yaw, int height, int horizon, float scale_height, int distance, int screen_width, int screen_height) {
@@ -50,9 +60,9 @@ void render(vec2 position, float yaw, int height, int horizon, float scale_heigh
 
 		// Raster line and draw vertical line for each segment.
 		for (int i = 0; i < screen_width; i++) {
-			float height_on_screen = (height - heightmap[]) / z * scale_height + horizon;
+			float height_on_screen = (height - heightmap[get_index(left_point)]) / z * scale_height + horizon;
 
-			draw_vertical_line(i, height_on_screen, y_buffer[i], colormap[]);
+			draw_vertical_line(i, height_on_screen, y_buffer[i], colormap[get_index(left_point)]);
 
 			if (height_on_screen < y_buffer[i]) {
 				y_buffer[i] = int(height_on_screen);
@@ -70,8 +80,4 @@ void render(vec2 position, float yaw, int height, int horizon, float scale_heigh
 
 void main() {
 	vec2 pos = vec2(view[3][0], view[3][2]);
-	texture_coords = vec3(aPos.xy, -aPos.z);
-	// We need to remove the translation off of the view matrix.
-	vec4 pos = projection * mat4(mat3(view)) * vec4(aPos * scale, 1.0);
-	gl_Position = pos.xyww;
 }

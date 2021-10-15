@@ -34,7 +34,7 @@ import jdk.incubator.foreign.MemoryAddress;
  * Represents a skybox.
  */
 public class Skybox implements AutoCloseable {
-	public static final Identifier SKYBOX_SHADER_ID = new Identifier(Constants.NAMESPACE, "skybox");
+	public static final Identifier SHADER_ID = new Identifier(Constants.NAMESPACE, "skybox");
 	private static int skyboxVao;
 	private static GraphicsBuffer skyboxVbo;
 
@@ -52,8 +52,8 @@ public class Skybox implements AutoCloseable {
 
 	public static Result<Skybox, ShaderProgram.LinkageError> of(CubeMapTexture texture) {
 		return new ShaderProgram.Builder()
-				.shader(Shader.compile(ShaderType.FRAGMENT, SKYBOX_SHADER_ID))
-				.shader(Shader.compile(ShaderType.VERTEX, SKYBOX_SHADER_ID))
+				.shader(Shader.compile(ShaderType.FRAGMENT, SHADER_ID))
+				.shader(Shader.compile(ShaderType.VERTEX, SHADER_ID))
 				.withCleanup()
 				.build()
 				.then(shader -> Result.ok(new Skybox(texture, shader)));

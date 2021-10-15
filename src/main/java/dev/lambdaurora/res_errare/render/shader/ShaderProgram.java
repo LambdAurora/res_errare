@@ -19,6 +19,7 @@ package dev.lambdaurora.res_errare.render.shader;
 
 import dev.lambdaurora.res_errare.system.GL;
 import dev.lambdaurora.res_errare.util.Result;
+import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +43,14 @@ public record ShaderProgram(int id) implements AutoCloseable {
 
 	public void setFloat(String name, float value) {
 		GL.get().uniform1f(this.getUniformLocation(name), value);
+	}
+
+	public void setMatrix4f(String name, Matrix4f value) {
+		this.setMatrix4f(name, value, false);
+	}
+
+	public void setMatrix4f(String name, Matrix4f value, boolean transpose) {
+		GL.get().uniformMatrix4fv(this.getUniformLocation(name), transpose, value);
 	}
 
 	@Override

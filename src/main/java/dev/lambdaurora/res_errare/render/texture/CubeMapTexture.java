@@ -104,8 +104,8 @@ public final class CubeMapTexture implements Texture<CubeMapTexture.CubeMapTextu
 					.face(CubeMapTextureTarget.NEGATIVE_X, directory.sub("left." + extension))
 					.face(CubeMapTextureTarget.POSITIVE_Y, directory.sub("top." + extension))
 					.face(CubeMapTextureTarget.NEGATIVE_Y, directory.sub("bottom." + extension))
-					.face(CubeMapTextureTarget.POSITIVE_Z, directory.sub("back." + extension))
-					.face(CubeMapTextureTarget.NEGATIVE_Z, directory.sub("front." + extension));
+					.face(CubeMapTextureTarget.POSITIVE_Z, directory.sub("front." + extension))
+					.face(CubeMapTextureTarget.NEGATIVE_Z, directory.sub("back." + extension));
 		}
 
 		public <V> Builder parameter(TextureParameter<V> parameter, V value) {
