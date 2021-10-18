@@ -23,6 +23,7 @@ import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public record ShaderProgram(int id) implements AutoCloseable {
 	public void use() {
@@ -53,6 +54,46 @@ public record ShaderProgram(int id) implements AutoCloseable {
 		GL.get().uniformMatrix4fv(this.getUniformLocation(name), transpose, value);
 	}
 
+	/**
+	 * Attaches a shader to this program.
+	 * <p>
+	 * The program needs to be {@link #link() linked} to apply any shader attachment.
+	 *
+	 * @param shader the shader to attach
+	 */
+	public void attachShader(Shader shader) {
+		GL.get().attachShader(this.id(), shader.id());
+	}
+
+	/**
+	 * Detaches a shader to this program.
+	 * <p>
+	 * The program needs to be {@link #link() linked} to apply any shader attachment.
+	 *
+	 * @param shader the shader to detach
+	 */
+	public void detachShader(Shader shader) {
+		GL.get().detachShader(this.id(), shader.id());
+	}
+
+	/**
+	 * Links the program.
+	 *
+	 * @return the error logs if the program couldn't be linked, otherwise empty
+	 */
+	public Optional<String> link() {
+		GL.get().linkProgram(this.id());
+
+		if (GL.get().getProgramiv(this.id(), GL.GL20.LINK_STATUS) == 0) {
+			int length = GL.get().getProgramiv(this.id(), GL.GL20.INFO_LOG_LENGTH);
+			var log = GL.get().getProgramInfoLog(this.id(), length);
+
+			return Optional.of(log);
+		}
+
+		return Optional.empty();
+	}
+
 	@Override
 	public void close() {
 		GL.get().deleteProgram(this.id);
@@ -60,6 +101,10 @@ public record ShaderProgram(int id) implements AutoCloseable {
 
 	public static void useNone() {
 		GL.get().useProgram(0);
+	}
+
+	public static Builder builder() {
+		return new Builder();
 	}
 
 	public static class Builder {
@@ -84,30 +129,29 @@ public record ShaderProgram(int id) implements AutoCloseable {
 		}
 
 		public Result<ShaderProgram, LinkageError> build() {
-			int id = GL.get().createProgram();
+			var program = new ShaderProgram(GL.get().createProgram());
 
-			this.shaders.forEach(shader -> GL.get().attachShader(id, shader.id()));
+			this.shaders.forEach(program::attachShader);
 
-			GL.get().linkProgram(id);
+			var linkageResult = program.link();
 
-			if (GL.get().getProgramiv(id, GL.GL20.LINK_STATUS) == 0) {
-				int length = GL.get().getProgramiv(id, GL.GL20.INFO_LOG_LENGTH);
-				var log = GL.get().getProgramInfoLog(id, length);
-
-				GL.get().deleteProgram(id);
+			if (linkageResult.isPresent()) {
+				program.close();
 
 				if (this.cleanup)
 					this.shaders.forEach(Shader::close);
 
-				return Result.fail(new LinkageError("Could not link shader program.", log));
+				return Result.fail(new LinkageError("Could not link shader program.", linkageResult.get()));
 			}
 
-			this.shaders.forEach(shader -> GL.get().detachShader(id, shader.id()));
+			if (this.cleanup) {
+				this.shaders.forEach(shader -> {
+					program.detachShader(shader);
+					shader.close();
+				});
+			}
 
-			if (this.cleanup)
-				this.shaders.forEach(Shader::close);
-
-			return Result.ok(new ShaderProgram(id));
+			return Result.ok(program);
 		}
 	}
 

@@ -19,15 +19,22 @@ package dev.lambdaurora.res_errare;
 
 import dev.lambdaurora.res_errare.render.Camera;
 import dev.lambdaurora.res_errare.render.GameRenderer;
+import dev.lambdaurora.res_errare.render.GeometricPrimitive;
 import dev.lambdaurora.res_errare.render.Skybox;
+import dev.lambdaurora.res_errare.render.buffer.BufferTarget;
+import dev.lambdaurora.res_errare.render.buffer.GraphicsBuffer;
 import dev.lambdaurora.res_errare.render.shader.Shader;
 import dev.lambdaurora.res_errare.render.shader.ShaderProgram;
 import dev.lambdaurora.res_errare.render.shader.ShaderType;
 import dev.lambdaurora.res_errare.render.texture.CubeMapTexture;
+import dev.lambdaurora.res_errare.render.texture.Texture2D;
+import dev.lambdaurora.res_errare.render.texture.TextureParameters;
 import dev.lambdaurora.res_errare.system.GL;
 import dev.lambdaurora.res_errare.system.GLFW;
 import dev.lambdaurora.res_errare.util.Identifier;
+import dev.lambdaurora.res_errare.util.NativeSizes;
 import dev.lambdaurora.res_errare.window.Window;
+import jdk.incubator.foreign.MemoryAddress;
 
 import java.awt.*;
 import java.io.IOException;
@@ -39,6 +46,7 @@ public final class ResErrare {
 	private Camera camera = new Camera();
 	private GameRenderer renderer;
 	private Skybox skybox;
+	private ShaderProgram voxelSpaceShader;
 
 	public ResErrare(String title) throws IOException {
 		this.window = Window.create(640, 480, title).orElseThrow();
@@ -59,11 +67,25 @@ public final class ResErrare {
 		this.skybox = skybox.get();
 		this.skybox.scale(50.f);
 
+		var result = ShaderProgram.builder()
+				.shader(Shader.compile(ShaderType.FRAGMENT, new Identifier(Constants.NAMESPACE, "voxelspace/shader")))
+				.shader(Shader.compile(ShaderType.GEOMETRY, new Identifier(Constants.NAMESPACE, "voxelspace/shader")))
+				.shader(Shader.compile(ShaderType.VERTEX, new Identifier(Constants.NAMESPACE, "voxelspace/shader")))
+				.build();
+		if (result.hasError())
+			throw result.getError();
+		this.voxelSpaceShader = result.get();
+
 		this.init();
 	}
 
 	private void init() {
-		this.window.setFramebufferSizeCallback(this.renderer::setupProjection);
+		this.window.setFramebufferSizeCallback((width, height) -> {
+			this.voxelSpaceShader.use();
+			this.voxelSpaceShader.setInt("screen_width", width);
+			this.voxelSpaceShader.setInt("screen_height", height);
+			this.renderer.setupProjection(width, height);
+		});
 		this.window.setKeyCallback((key, scancode, action, mods) -> {
 			if (action == 0) {
 				switch (key) {
@@ -77,11 +99,38 @@ public final class ResErrare {
 		});
 
 		this.camera.setPosition(0, 0, 3);
+
+		this.voxelSpaceShader.use();
+		this.voxelSpaceShader.setInt("heightmap", 0);
+		this.voxelSpaceShader.setInt("colormap_texture", 1);
+		this.voxelSpaceShader.setInt("size", 512);
 	}
 
 	public void run() {
 		GL.get().enable(GL.GL11.CULL_FACE);
 		GL.get().enable(GL.GL11.DEPTH_TEST);
+
+		Texture2D heightmapTexture, colormapTexture;
+		try {
+			heightmapTexture = Texture2D.builder(new Identifier(Constants.NAMESPACE, "textures/heightmap.png"))
+					.parameter(TextureParameters.MIN_FILTER, TextureParameters.FilterValue.NEAREST)
+					.parameter(TextureParameters.MAG_FILTER, TextureParameters.FilterValue.NEAREST)
+					.build();
+			colormapTexture = Texture2D.builder(new Identifier(Constants.NAMESPACE, "textures/colormap.png"))
+					.parameter(TextureParameters.MIN_FILTER, TextureParameters.FilterValue.NEAREST)
+					.parameter(TextureParameters.MAG_FILTER, TextureParameters.FilterValue.NEAREST)
+					.build();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+
+		int voxelSpaceVao = GL.get().genVertexArrays(1)[0];
+		GL.get().bindVertexArray(voxelSpaceVao);
+		var voxelSpaceVbo = GraphicsBuffer.ofStatic(BufferTarget.ARRAY, new float[]{0, 0, 0});
+		GL.get().enableVertexAttribArray(0);
+		GL.get().vertexAttribPointer(0, 3, GL.GL11.FLOAT, false, NativeSizes.FLOAT_SIZE * 3, MemoryAddress.NULL);
+		voxelSpaceVbo.unbind();
 
 		boolean direction = true;
 		while (this.running) {
@@ -95,10 +144,23 @@ public final class ResErrare {
 
 			this.render();
 
+			this.voxelSpaceShader.use();
+			GL.get().bindVertexArray(voxelSpaceVao);
+			GL.get().activeTexture(GL.GL13.TEXTURE0);
+			heightmapTexture.bind();
+			GL.get().activeTexture(GL.GL13.TEXTURE1);
+			colormapTexture.bind();
+			GL.get().drawArrays(GeometricPrimitive.POINTS, 0, 1);
+			GL.get().bindVertexArray(0);
+			heightmapTexture.unbind();
+			colormapTexture.unbind();
+
 			GLFW.pollEvents();
 			this.window.swapBuffers();
 			this.running &= !this.window.shouldClose();
 		}
+
+		this.voxelSpaceShader.close();
 	}
 
 	public static void main(String[] args) throws IOException {
@@ -109,19 +171,8 @@ public final class ResErrare {
 
 		var game = new ResErrare("res_errare Test");
 
-		var result = new ShaderProgram.Builder()
-				.shader(Shader.compile(ShaderType.FRAGMENT, new Identifier(Constants.NAMESPACE, "shader")))
-				.shader(Shader.compile(ShaderType.VERTEX, new Identifier(Constants.NAMESPACE, "shader")))
-				.withCleanup()
-				.build();
-		if (result.hasError())
-			throw result.getError();
-
-		var shader = result.get();
-
 		game.run();
 
-		shader.close();
 		terminate();
 	}
 
@@ -129,7 +180,7 @@ public final class ResErrare {
 		GL.get().clear(GL.GL11.COLOR_BUFFER_BIT | GL.GL11.DEPTH_BUFFER_BIT);
 		GL.get().clearColor(0.f, 0.f, 0.f, 1.f);
 
-		this.skybox.draw();
+		//this.skybox.draw();
 	}
 
 	public static void terminate() {

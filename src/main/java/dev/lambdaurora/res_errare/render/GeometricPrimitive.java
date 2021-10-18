@@ -20,6 +20,7 @@ package dev.lambdaurora.res_errare.render;
 import dev.lambdaurora.res_errare.system.OpenGLIdProvider;
 
 public enum GeometricPrimitive implements OpenGLIdProvider {
+	POINTS(0x0000),
 	TRIANGLES(0x0004),
 	TRIANGLE_STRIP(0x0005);
 

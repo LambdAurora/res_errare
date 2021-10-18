@@ -57,7 +57,8 @@ public enum TextureParameters {
 	}
 
 	public enum FilterValue implements OpenGLIdProvider {
-		LINEAR(0x2601);
+		LINEAR(0x2601),
+		NEAREST(0x2600);
 
 		private final int glId;
 

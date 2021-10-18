@@ -542,6 +542,10 @@ public final class GL {
 		}
 	}
 
+	public void generateMipmap(TextureType type) {
+		voidCallInt("glGenerateMipmap", type.glId());
+	}
+
 	@FunctionalInterface
 	public interface FunctionFetcher {
 		MemoryAddress fetch(String name);
@@ -566,6 +570,7 @@ public final class GL {
 
 	public static final class GL13 {
 		public static final int TEXTURE0 = 0x84c0;
+		public static final int TEXTURE1 = 0x84c1;
 	}
 
 	public static final class GL20 {

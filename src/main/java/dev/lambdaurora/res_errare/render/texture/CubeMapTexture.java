@@ -126,9 +126,6 @@ public final class CubeMapTexture implements Texture<CubeMapTexture.CubeMapTextu
 			var texture = new CubeMapTexture(GL.get().genTextures(1)[0]);
 			texture.bind();
 
-			//noinspection unchecked
-			this.parameters.forEach((parameter, value) -> setParameters(texture, (TextureParameter<? super Object>) parameter, value));
-
 			for (var entry : this.faces.entrySet()) {
 				texture.upload(entry.getKey(), 0, entry.getValue());
 
@@ -141,6 +138,9 @@ public final class CubeMapTexture implements Texture<CubeMapTexture.CubeMapTextu
 					}
 				}
 			}
+
+			//noinspection unchecked
+			this.parameters.forEach((parameter, value) -> setParameters(texture, (TextureParameter<? super Object>) parameter, value));
 
 			texture.unbind();
 			return texture;

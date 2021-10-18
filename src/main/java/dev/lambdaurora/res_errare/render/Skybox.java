@@ -51,7 +51,7 @@ public class Skybox implements AutoCloseable {
 	}
 
 	public static Result<Skybox, ShaderProgram.LinkageError> of(CubeMapTexture texture) {
-		return new ShaderProgram.Builder()
+		return ShaderProgram.builder()
 				.shader(Shader.compile(ShaderType.FRAGMENT, SHADER_ID))
 				.shader(Shader.compile(ShaderType.VERTEX, SHADER_ID))
 				.withCleanup()
@@ -103,8 +103,10 @@ public class Skybox implements AutoCloseable {
 	}
 
 	public static void terminate() {
-		GL.get().deleteVertexArrays(skyboxVao);
-		skyboxVbo.close();
+		if (skyboxVao != 0)
+			GL.get().deleteVertexArrays(skyboxVao);
+		if (skyboxVbo != null)
+			skyboxVbo.close();
 		skyboxVao = 0;
 		skyboxVbo = null;
 	}

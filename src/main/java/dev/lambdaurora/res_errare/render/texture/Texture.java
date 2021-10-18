@@ -48,14 +48,14 @@ public interface Texture<T extends OpenGLIdProvider> extends AutoCloseable {
 	}
 
 	/**
-	 * Uploads the given image to the texture?
+	 * Uploads the given image to the texture.
 	 *
 	 * @param target the texture target
 	 * @param level the level
 	 * @param image the image to upload
 	 */
 	default void upload(T target, int level, Image image) {
-		GL.get().texImage2D(target, level, Image.Format.ARGB.glInternalFormatId(), image);
+		GL.get().texImage2D(target, level, image.format().glInternalFormatId(), image);
 	}
 
 	default <V> void setParameter(TextureParameter<V> parameter, V value) {
@@ -63,6 +63,10 @@ public interface Texture<T extends OpenGLIdProvider> extends AutoCloseable {
 			case INTEGER -> GL.get().texParameteri(this.type(), parameter, parameter.getIntValue(value));
 			case FLOAT -> GL.get().texParameterf(this.type(), parameter, parameter.getFloatValue(value));
 		}
+	}
+
+	default void generateMipmap() {
+		GL.get().generateMipmap(this.type());
 	}
 
 	/**
