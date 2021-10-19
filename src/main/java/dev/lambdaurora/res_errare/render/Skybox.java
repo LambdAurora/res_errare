@@ -18,6 +18,8 @@
 package dev.lambdaurora.res_errare.render;
 
 import dev.lambdaurora.res_errare.Constants;
+import dev.lambdaurora.res_errare.render.array.VertexArray;
+import dev.lambdaurora.res_errare.render.array.VertexLayout;
 import dev.lambdaurora.res_errare.render.buffer.BufferTarget;
 import dev.lambdaurora.res_errare.render.buffer.GraphicsBuffer;
 import dev.lambdaurora.res_errare.render.shader.Shader;
@@ -26,16 +28,17 @@ import dev.lambdaurora.res_errare.render.shader.ShaderType;
 import dev.lambdaurora.res_errare.render.texture.CubeMapTexture;
 import dev.lambdaurora.res_errare.system.GL;
 import dev.lambdaurora.res_errare.util.Identifier;
-import dev.lambdaurora.res_errare.util.NativeSizes;
 import dev.lambdaurora.res_errare.util.Result;
-import jdk.incubator.foreign.MemoryAddress;
+
+import java.util.List;
 
 /**
  * Represents a skybox.
  */
 public class Skybox implements AutoCloseable {
 	public static final Identifier SHADER_ID = new Identifier(Constants.NAMESPACE, "skybox");
-	private static int skyboxVao;
+	private static final VertexLayout VAO_LAYOUT = new VertexLayout(List.of(VertexLayout.VEC3F_ELEMENT));
+	private static final VertexArray SKYBOX_VAO = new VertexArray();
 	private static GraphicsBuffer skyboxVbo;
 
 	private final CubeMapTexture texture;
@@ -75,11 +78,12 @@ public class Skybox implements AutoCloseable {
 	public void draw() {
 		GL.get().depthFunc(GL.GL11.LEQUAL);
 		this.shader.use();
-		bindSkyboxVao();
 		GL.get().activeTexture(GL.GL13.TEXTURE0);
 		this.texture.bind();
-		GL.get().drawArrays(GeometricPrimitive.TRIANGLE_STRIP, 0, VERTICES.length / 3);
-		GL.get().bindVertexArray(0);
+		bindSkyboxVao();
+		SKYBOX_VAO.draw(GeometricPrimitive.TRIANGLE_STRIP, 0, VAO_LAYOUT, VERTICES.length);
+		SKYBOX_VAO.finish();
+		this.texture.unbind();
 		GL.get().depthFunc(GL.GL11.LESS);
 	}
 
@@ -90,24 +94,21 @@ public class Skybox implements AutoCloseable {
 	}
 
 	private static void bindSkyboxVao() {
-		if (skyboxVao == 0) {
-			skyboxVao = GL.get().genVertexArrays(1)[0];
-			GL.get().bindVertexArray(skyboxVao);
+		boolean valid = SKYBOX_VAO.isValid();
+
+		SKYBOX_VAO.bind();
+
+		if (!valid) {
 			skyboxVbo = GraphicsBuffer.ofStatic(BufferTarget.ARRAY, VERTICES);
-			GL.get().enableVertexAttribArray(0);
-			GL.get().vertexAttribPointer(0, 3, GL.GL11.FLOAT, false, NativeSizes.FLOAT_SIZE * 3, MemoryAddress.NULL);
+			SKYBOX_VAO.useLayout(VAO_LAYOUT);
 			skyboxVbo.unbind();
 		}
-
-		GL.get().bindVertexArray(skyboxVao);
 	}
 
 	public static void terminate() {
-		if (skyboxVao != 0)
-			GL.get().deleteVertexArrays(skyboxVao);
+		SKYBOX_VAO.close();
 		if (skyboxVbo != null)
 			skyboxVbo.close();
-		skyboxVao = 0;
 		skyboxVbo = null;
 	}
 

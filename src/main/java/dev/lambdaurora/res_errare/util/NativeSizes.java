@@ -19,6 +19,8 @@ package dev.lambdaurora.res_errare.util;
 
 import jdk.incubator.foreign.CLinker;
 import org.joml.Matrix4f;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 public enum NativeSizes {
@@ -31,10 +33,14 @@ public enum NativeSizes {
 	public static final long FLOAT_SIZE = CLinker.C_FLOAT.byteSize();
 	public static final long DOUBLE_SIZE = CLinker.C_DOUBLE.byteSize();
 
-	public static final long VEC4_LENGTH = 4;
+	public static final int VEC2_LENGTH = 2;
+	public static final long VEC2F_SIZE = FLOAT_SIZE * VEC2_LENGTH;
+	public static final int VEC3_LENGTH = 3;
+	public static final long VEC3F_SIZE = FLOAT_SIZE * VEC3_LENGTH;
+	public static final int VEC4_LENGTH = 4;
 	public static final long VEC4F_SIZE = FLOAT_SIZE * VEC4_LENGTH;
 
-	public static final long MATRIX4_LENGTH = VEC4_LENGTH * VEC4_LENGTH;
+	public static final int MATRIX4_LENGTH = VEC4_LENGTH * VEC4_LENGTH;
 	public static final long MATRIX4F_SIZE = FLOAT_SIZE * MATRIX4_LENGTH;
 
 	public static long sizeof(float value) {
@@ -60,6 +66,10 @@ public enum NativeSizes {
 			return FLOAT_SIZE;
 		else if (clazz == double.class)
 			return DOUBLE_SIZE;
+		else if (Vector2f.class.isAssignableFrom(clazz))
+			return VEC2F_SIZE;
+		else if (Vector3f.class.isAssignableFrom(clazz))
+			return VEC3F_SIZE;
 		else if (Vector4f.class.isAssignableFrom(clazz))
 			return VEC4F_SIZE;
 		else if (Matrix4f.class.isAssignableFrom(clazz))
@@ -72,8 +82,14 @@ public enum NativeSizes {
 		return sizeof(value.getClass());
 	}
 
-	public static long lengthOf(Object value) {
-		if (value instanceof Matrix4f)
+	public static int lengthOf(Object value) {
+		if (value instanceof Vector2f)
+			return VEC2_LENGTH;
+		else if (value instanceof Vector3f)
+			return VEC3_LENGTH;
+		else if (value instanceof Vector4f)
+			return VEC4_LENGTH;
+		else if (value instanceof Matrix4f)
 			return MATRIX4_LENGTH;
 		return -1;
 	}

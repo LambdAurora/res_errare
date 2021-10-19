@@ -32,6 +32,24 @@ public abstract class Result<T, E> {
 
 	public abstract boolean hasError();
 
+	/**
+	 * {@return gets the result if successful, otherwise throw an exception}
+	 */
+	public T getOrThrow() {
+		if (this.hasError()) {
+			var error = this.getError();
+
+			if (error instanceof RuntimeException runtimeException)
+				throw runtimeException;
+			else if (error instanceof Throwable throwable)
+				throw new RuntimeException(throwable);
+			else
+				throw new RuntimeException(error.toString());
+		}
+
+		return this.get();
+	}
+
 	public <N> Result<N, E> then(Function<T, Result<N, E>> thenFunction) {
 		if (this.hasError())
 			return fail(this.getError());

@@ -22,6 +22,7 @@ import dev.lambdaurora.res_errare.render.GameRenderer;
 import dev.lambdaurora.res_errare.render.Skybox;
 import dev.lambdaurora.res_errare.render.buffer.BufferTarget;
 import dev.lambdaurora.res_errare.render.buffer.GraphicsBuffer;
+import dev.lambdaurora.res_errare.render.graphics.Graphics2D;
 import dev.lambdaurora.res_errare.render.shader.Shader;
 import dev.lambdaurora.res_errare.render.shader.ShaderProgram;
 import dev.lambdaurora.res_errare.render.shader.ShaderType;
@@ -58,21 +59,16 @@ public final class ResErrare {
 
 		this.renderer = new GameRenderer();
 
-		var skybox = Skybox.of(CubeMapTexture.builder()
-				.facesFromDirectory(new Identifier(Constants.NAMESPACE, "textures/skybox"), "jpg")
-				.withCleanup()
-				.build());
-		if (skybox.hasError())
-			throw skybox.getError();
-		this.skybox = skybox.get();
+		this.skybox = Skybox.of(CubeMapTexture.builder()
+						.facesFromDirectory(new Identifier(Constants.NAMESPACE, "textures/skybox"), "jpg")
+						.withCleanup()
+						.build())
+				.getOrThrow();
 		this.skybox.scale(50.f);
 
-		var result = ShaderProgram.builder()
+		this.voxelSpaceShader = ShaderProgram.builder()
 				.shader(Shader.compile(ShaderType.COMPUTE, new Identifier(Constants.NAMESPACE, "voxelspace/shader")))
-				.build();
-		if (result.hasError())
-			throw result.getError();
-		this.voxelSpaceShader = result.get();
+				.build().getOrThrow();
 
 		this.init();
 	}
@@ -129,6 +125,8 @@ public final class ResErrare {
 		GL.get().vertexAttribPointer(0, 3, GL.GL11.FLOAT, false, NativeSizes.FLOAT_SIZE * 3, MemoryAddress.NULL);
 		voxelSpaceVbo.unbind();
 
+		var graphics = Graphics2D.get();
+
 		boolean direction = true;
 		while (this.running) {
 			float newYaw = this.camera.getYaw() + .5f;
@@ -139,7 +137,8 @@ public final class ResErrare {
 
 			this.renderer.updateView(this.camera.getViewMatrix());
 
-			this.render();
+			GL.get().clear(GL.GL11.COLOR_BUFFER_BIT | GL.GL11.DEPTH_BUFFER_BIT);
+			GL.get().clearColor(0.f, 0.f, 0.f, 1.f);
 
 			this.voxelSpaceShader.use();
 			outputTexture.bind();
@@ -149,6 +148,10 @@ public final class ResErrare {
 			}
 			outputTexture.unbind();
 			ShaderProgram.useNone();
+
+			graphics.drawScreen(outputTexture);
+
+			this.render();
 
 			GLFW.pollEvents();
 			this.window.swapBuffers();
@@ -172,9 +175,6 @@ public final class ResErrare {
 	}
 
 	public void render() {
-		GL.get().clear(GL.GL11.COLOR_BUFFER_BIT | GL.GL11.DEPTH_BUFFER_BIT);
-		GL.get().clearColor(0.f, 0.f, 0.f, 1.f);
-
 		this.skybox.draw();
 	}
 
