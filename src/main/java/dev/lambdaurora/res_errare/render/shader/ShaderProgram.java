@@ -94,6 +94,10 @@ public record ShaderProgram(int id) implements AutoCloseable {
 		return Optional.empty();
 	}
 
+	public void dispatchCompute(int numGroupsX, int numGroupsY, int numGroupsZ) {
+		GL.get().dispatchCompute(numGroupsX, numGroupsY, numGroupsZ);
+	}
+
 	@Override
 	public void close() {
 		GL.get().deleteProgram(this.id);

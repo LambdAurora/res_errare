@@ -34,22 +34,18 @@ public interface Image extends AutoCloseable {
 	@Nullable MemoryAddress getImageAddress(ResourceScope scope);
 
 	enum Format {
-		RED(1, 0x1903),
-		RGB(3, 0x1907),
-		ARGB(4, 0x1908);
+		RED(1, 0x1903, Texture.InternalFormat.R32F),
+		RGB(3, 0x1907, Texture.InternalFormat.RGB32F),
+		ARGB(4, 0x1908, Texture.InternalFormat.RGBA32F);
 
 		private final int channelCount;
 		private final int glFormatId;
-		private final int glInternalId;
+		private final Texture.InternalFormat internalFormat;
 
-		Format(int channelCount, int glId) {
-			this(channelCount, glId, glId);
-		}
-
-		Format(int channelCount, int glFormatId, int glInternalId) {
+		Format(int channelCount, int glFormatId, Texture.InternalFormat internalFormat) {
 			this.channelCount = channelCount;
 			this.glFormatId = glFormatId;
-			this.glInternalId = glInternalId;
+			this.internalFormat = internalFormat;
 		}
 
 		public int channelCount() {
@@ -60,8 +56,8 @@ public interface Image extends AutoCloseable {
 			return this.glFormatId;
 		}
 
-		public int glInternalFormatId() {
-			return this.glInternalId;
+		public Texture.InternalFormat internalFormat() {
+			return this.internalFormat;
 		}
 	}
 }

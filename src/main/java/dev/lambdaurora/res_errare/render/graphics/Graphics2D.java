@@ -15,26 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dev.lambdaurora.res_errare.system.callback;
+package dev.lambdaurora.res_errare.render.graphics;
 
-import jdk.incubator.foreign.MemoryAddress;
+public class Graphics2D {
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-
-@FunctionalInterface
-public interface GLFWFramebufferSizeCallback {
-	MethodHandle HANDLE = fetch();
-
-	void onSetFramebufferSize(MemoryAddress window, int width, int height);
-
-	private static MethodHandle fetch() {
-		try {
-			return MethodHandles.publicLookup().findVirtual(GLFWFramebufferSizeCallback.class, "onSetFramebufferSize",
-					MethodType.methodType(void.class, MemoryAddress.class, int.class, int.class));
-		} catch (NoSuchMethodException | IllegalAccessException e) {
-			throw new ExceptionInInitializerError(e);
-		}
-	}
 }

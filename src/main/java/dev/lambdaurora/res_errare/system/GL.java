@@ -23,6 +23,7 @@ import dev.lambdaurora.res_errare.render.buffer.BufferUsage;
 import dev.lambdaurora.res_errare.render.buffer.range.Matrix4fBufferRange;
 import dev.lambdaurora.res_errare.render.shader.ShaderType;
 import dev.lambdaurora.res_errare.render.texture.Image;
+import dev.lambdaurora.res_errare.render.texture.Texture;
 import dev.lambdaurora.res_errare.render.texture.TextureType;
 import dev.lambdaurora.res_errare.util.NativeSizes;
 import jdk.incubator.foreign.*;
@@ -267,14 +268,23 @@ public final class GL {
 		}
 	}
 
-	public void texImage2D(OpenGLIdProvider target, int level, int internalFormat, Image image) {
+	public void texImage2D(OpenGLIdProvider target, int level, Texture.InternalFormat internalFormat, Image image) {
 		try (var scope = ResourceScope.newConfinedScope()) {
 			var imgData = image.getImageAddress(scope);
 
+			this.texImage2D(target, level, internalFormat, image.width(), image.height(), image.format(), GL11.UNSIGNED_BYTE, imgData);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void texImage2D(OpenGLIdProvider target, int level, Texture.InternalFormat internalFormat,
+	                       int width, int height, Image.Format format, int type, MemoryAddress data) {
+		try {
 			this.getFunction("glTexImage2D",
 							address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, int.class,
 									int.class, int.class, int.class, int.class, MemoryAddress.class))
-					.invokeExact(target.glId(), level, internalFormat, image.width(), image.height(), 0, image.format().glFormatId(), GL11.UNSIGNED_BYTE, imgData);
+					.invokeExact(target.glId(), level, internalFormat.glId(), width, height, 0, format.glFormatId(), type, data);
 		} catch (Throwable e) {
 			throw new NativeFunction.FunctionInvocationException(e);
 		}
@@ -546,9 +556,51 @@ public final class GL {
 		voidCallInt("glGenerateMipmap", type.glId());
 	}
 
+	/* GL 4.2 */
+
+	public void bindImageTexture(int unit, int texture, int level, boolean layered, int layer, Access access, Texture.InternalFormat format) {
+		try {
+			this.getFunction("glBindImageTexture",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class)
+			).invokeExact(unit, texture, level, layered ? 1 : 0, layer, access.glId(), format.glId());
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void dispatchCompute(int numGroupsX, int numGroupsY, int numGroupsZ) {
+		try {
+			this.getFunction("glDispatchCompute", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class))
+					.invokeExact(numGroupsX, numGroupsY, numGroupsZ);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
+	public void memoryBarrier(int barriers) {
+		voidCallInt("glMemoryBarrier", barriers);
+	}
+
 	@FunctionalInterface
 	public interface FunctionFetcher {
 		MemoryAddress fetch(String name);
+	}
+
+	public enum Access implements OpenGLIdProvider {
+		READ_ONLY(0x88b8),
+		WRITE_ONLY(0x88b9),
+		READ_WRITE(0x88ba);
+
+		private final int glId;
+
+		Access(int glId) {
+			this.glId = glId;
+		}
+
+		@Override
+		public int glId() {
+			return this.glId;
+		}
 	}
 
 	public static final class GL11 {
@@ -577,5 +629,9 @@ public final class GL {
 		public static final int COMPILE_STATUS = 0x8b81;
 		public static final int LINK_STATUS = 0x8b82;
 		public static final int INFO_LOG_LENGTH = 0x8b84;
+	}
+
+	public static final class GL42 {
+		public static final int SHADER_IMAGE_ACCESS_BARRIER_BIT = 0x00000020;
 	}
 }

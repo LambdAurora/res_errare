@@ -19,7 +19,6 @@ package dev.lambdaurora.res_errare;
 
 import dev.lambdaurora.res_errare.render.Camera;
 import dev.lambdaurora.res_errare.render.GameRenderer;
-import dev.lambdaurora.res_errare.render.GeometricPrimitive;
 import dev.lambdaurora.res_errare.render.Skybox;
 import dev.lambdaurora.res_errare.render.buffer.BufferTarget;
 import dev.lambdaurora.res_errare.render.buffer.GraphicsBuffer;
@@ -27,6 +26,7 @@ import dev.lambdaurora.res_errare.render.shader.Shader;
 import dev.lambdaurora.res_errare.render.shader.ShaderProgram;
 import dev.lambdaurora.res_errare.render.shader.ShaderType;
 import dev.lambdaurora.res_errare.render.texture.CubeMapTexture;
+import dev.lambdaurora.res_errare.render.texture.Texture;
 import dev.lambdaurora.res_errare.render.texture.Texture2D;
 import dev.lambdaurora.res_errare.render.texture.TextureParameters;
 import dev.lambdaurora.res_errare.system.GL;
@@ -68,9 +68,7 @@ public final class ResErrare {
 		this.skybox.scale(50.f);
 
 		var result = ShaderProgram.builder()
-				.shader(Shader.compile(ShaderType.FRAGMENT, new Identifier(Constants.NAMESPACE, "voxelspace/shader")))
-				.shader(Shader.compile(ShaderType.GEOMETRY, new Identifier(Constants.NAMESPACE, "voxelspace/shader")))
-				.shader(Shader.compile(ShaderType.VERTEX, new Identifier(Constants.NAMESPACE, "voxelspace/shader")))
+				.shader(Shader.compile(ShaderType.COMPUTE, new Identifier(Constants.NAMESPACE, "voxelspace/shader")))
 				.build();
 		if (result.hasError())
 			throw result.getError();
@@ -82,8 +80,7 @@ public final class ResErrare {
 	private void init() {
 		this.window.setFramebufferSizeCallback((width, height) -> {
 			this.voxelSpaceShader.use();
-			this.voxelSpaceShader.setInt("screen_width", width);
-			this.voxelSpaceShader.setInt("screen_height", height);
+			this.voxelSpaceShader.setInt("height", width);
 			this.renderer.setupProjection(width, height);
 		});
 		this.window.setKeyCallback((key, scancode, action, mods) -> {
@@ -101,8 +98,8 @@ public final class ResErrare {
 		this.camera.setPosition(0, 0, 3);
 
 		this.voxelSpaceShader.use();
-		this.voxelSpaceShader.setInt("heightmap", 0);
-		this.voxelSpaceShader.setInt("colormap_texture", 1);
+		this.voxelSpaceShader.setInt("heightmap", 1);
+		this.voxelSpaceShader.setInt("colormap", 2);
 		this.voxelSpaceShader.setInt("size", 512);
 	}
 
@@ -110,7 +107,7 @@ public final class ResErrare {
 		GL.get().enable(GL.GL11.CULL_FACE);
 		GL.get().enable(GL.GL11.DEPTH_TEST);
 
-		Texture2D heightmapTexture, colormapTexture;
+		Texture2D heightmapTexture, colormapTexture, outputTexture = Texture2D.of(800, 600, Texture.InternalFormat.RGBA32F);
 		try {
 			heightmapTexture = Texture2D.builder(new Identifier(Constants.NAMESPACE, "textures/heightmap.png"))
 					.parameter(TextureParameters.MIN_FILTER, TextureParameters.FilterValue.NEAREST)
@@ -145,15 +142,13 @@ public final class ResErrare {
 			this.render();
 
 			this.voxelSpaceShader.use();
-			GL.get().bindVertexArray(voxelSpaceVao);
-			GL.get().activeTexture(GL.GL13.TEXTURE0);
-			heightmapTexture.bind();
-			GL.get().activeTexture(GL.GL13.TEXTURE1);
-			colormapTexture.bind();
-			GL.get().drawArrays(GeometricPrimitive.POINTS, 0, 1);
-			GL.get().bindVertexArray(0);
-			heightmapTexture.unbind();
-			colormapTexture.unbind();
+			outputTexture.bind();
+			try (var ignored = outputTexture.bindImageTexture(0, 0, GL.Access.WRITE_ONLY, Texture.InternalFormat.RGBA32F)) {
+				this.voxelSpaceShader.dispatchCompute(800, 600, 1);
+				GL.get().memoryBarrier(GL.GL42.SHADER_IMAGE_ACCESS_BARRIER_BIT);
+			}
+			outputTexture.unbind();
+			ShaderProgram.useNone();
 
 			GLFW.pollEvents();
 			this.window.swapBuffers();
@@ -165,7 +160,7 @@ public final class ResErrare {
 
 	public static void main(String[] args) throws IOException {
 		GLFW.init();
-		GLFW.windowHint(GLFW.CONTEXT_VERSION_MAJOR, 3);
+		GLFW.windowHint(GLFW.CONTEXT_VERSION_MAJOR, 4);
 		GLFW.windowHint(GLFW.CONTEXT_VERSION_MINOR, 3);
 		GLFW.windowHint(GLFW.OPENGL_PROFILE, GLFW.OPENGL_CORE_PROFILE);
 
@@ -180,7 +175,7 @@ public final class ResErrare {
 		GL.get().clear(GL.GL11.COLOR_BUFFER_BIT | GL.GL11.DEPTH_BUFFER_BIT);
 		GL.get().clearColor(0.f, 0.f, 0.f, 1.f);
 
-		//this.skybox.draw();
+		this.skybox.draw();
 	}
 
 	public static void terminate() {

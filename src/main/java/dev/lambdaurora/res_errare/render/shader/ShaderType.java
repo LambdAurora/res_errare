@@ -23,7 +23,9 @@ import dev.lambdaurora.res_errare.system.OpenGLIdProvider;
  * Represents a shader type.
  */
 public enum ShaderType implements OpenGLIdProvider {
+	COMPUTE("csh", 0x91b9),
 	FRAGMENT("fsh", 0x8b30),
+	@Deprecated
 	GEOMETRY("gsh", 0x8dd9),
 	VERTEX("vsh", 0x8b31);
 

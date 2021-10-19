@@ -53,7 +53,13 @@ public final class Texture2D implements Texture<Texture2D.Target> {
 	 * @param image the image to upload
 	 */
 	public void upload(int level, Image image) {
-		GL.get().texImage2D(this.type(), level, image.format().glInternalFormatId(), image);
+		GL.get().texImage2D(this.type(), level, image.format().internalFormat(), image);
+	}
+
+	public static Texture2D of(int width, int height, InternalFormat format) {
+		var texture = builder((Image) null).build();
+		texture.initEmpty(Target.TEXTURE_2D, 0, format, width, height);
+		return texture;
 	}
 
 	/**
