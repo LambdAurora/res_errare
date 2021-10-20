@@ -17,6 +17,7 @@
 
 package dev.lambdaurora.res_errare.window;
 
+import dev.lambdaurora.res_errare.input.ButtonAction;
 import dev.lambdaurora.res_errare.system.GLFW;
 import dev.lambdaurora.res_errare.system.callback.GLFWKeyCallback;
 import dev.lambdaurora.res_errare.util.math.Dimensions2D;
@@ -68,12 +69,18 @@ public class Window {
 		GLFW.setFramebufferSizeCallback(this.handle, (window, width, height) -> callback.onSetFramebufferSize(width, height));
 	}
 
+	/* Input */
+
+	public ButtonAction getKey(int key) {
+		return GLFW.getKey(this.handle, key);
+	}
+
 	public void setKeyCallback(KeyCallback callback) {
 		freeIfNeeded(this.currentKeyCallback);
 
 		this.currentKeyCallback = CLinker.getInstance().upcallStub(
 				GLFWKeyCallback.HANDLE.bindTo((GLFWKeyCallback) (window, key, scancode, action, mods)
-						-> callback.onKey(key, scancode, action, mods)),
+						-> callback.onKey(key, scancode, ButtonAction.byId(action), mods)),
 				FunctionDescriptor.ofVoid(CLinker.C_POINTER, CLinker.C_INT, CLinker.C_INT, CLinker.C_INT, CLinker.C_INT),
 				ResourceScope.globalScope()
 		);
@@ -101,6 +108,6 @@ public class Window {
 
 	@FunctionalInterface
 	public interface KeyCallback {
-		void onKey(int key, int scancode, int action, int mods);
+		void onKey(int key, int scancode, ButtonAction action, int mods);
 	}
 }

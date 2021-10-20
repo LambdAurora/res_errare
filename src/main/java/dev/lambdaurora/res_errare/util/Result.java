@@ -57,6 +57,22 @@ public abstract class Result<T, E> {
 			return thenFunction.apply(this.get());
 	}
 
+	public <N> Result<N, E> map(Function<T, N> valueMapper) {
+		if (this.hasError()) {
+			return fail(this.getError());
+		} else {
+			return ok(valueMapper.apply(this.get()));
+		}
+	}
+
+	public <E2> Result<T, E2> mapError(Function<E, E2> errorMapper) {
+		if (this.hasError()) {
+			return fail(errorMapper.apply(this.getError()));
+		} else {
+			return ok(this.get());
+		}
+	}
+
 	public static <T, E> Result<T, E> ok(T result) {
 		return new Result<>() {
 			@Override

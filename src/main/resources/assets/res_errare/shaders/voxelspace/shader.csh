@@ -5,13 +5,10 @@ layout (local_size_x = 1, local_size_y = 1) in;
 layout (rgba32f, binding = 0) uniform writeonly image2D img_output;
 layout (rgba32f, binding = 1) uniform readonly image2D heightmap;
 layout (rgba32f, binding = 2) uniform readonly image2D colormap;
-uniform int height;
 uniform int size;
-
-layout (std140) uniform matrices {
-	mat4 projection;
-	mat4 view;
-};
+uniform vec3 pos;
+uniform float yaw;
+uniform float pitch;
 
 int get_tiling_texture_coord(int absolute_coord) {
 	return absolute_coord % size;
@@ -21,24 +18,94 @@ ivec2 get_tiling_texture_coords(ivec2 absolute_coord) {
 	return ivec2(get_tiling_texture_coord(absolute_coord.x), get_tiling_texture_coord(absolute_coord.y));
 }
 
-void draw_vertical_line(int x, int y0, int y1, vec4 color) {
-	for (int i = y0; i <= y1; i++) {
+void draw_vertical_line(int x, int y0, int y1, ivec2 size, vec4 color) {
+	y0 = size.y - y0;
+	y1 = size.y - y1;
+	for (int i = y1; i <= y0; i++) {
 		imageStore(img_output, ivec2(x, i), color);
 	}
+}
+
+float max_rgb(vec4 color) {
+	float max = color.r;
+	if (max < color.g)
+		max = color.g;
+	if (max < color.b)
+		max = color.b;
+	return max;
+}
+
+vec4 distribute_rgb(vec4 color) {
+	float threshold = 0.999f;
+	float m = max_rgb(color);
+	if (m <= threshold)
+		return color;
+
+	float total = color.r + color.g + color.b;
+	if (total >= 3 * threshold)
+		return vec4(threshold, threshold, threshold, 1.f);
+
+	float x = (3.f * threshold - total) / (3.f * m - total);
+	float gray = threshold - x * m;
+	return vec4(gray + x * color.r, gray + x * color.g, gray + x * color.b, 1.f);
 }
 
 void main() {
 	// gl_LocalInvocationID.xy * gl_WorkGroupID.xy == gl_GlobalInvocationID
 	ivec2 coords = ivec2(gl_GlobalInvocationID);
+	ivec2 screen_dimensions = imageSize(img_output);
 
-	vec3 pos = vec3(view[3][0], view[3][1], view[3][2]);
+	draw_vertical_line(coords.x, 0, screen_dimensions.y, screen_dimensions, vec4(0.1f, 0.3f, 1.f, 1.f));
 
-	vec4 pixel;
-	if (((gl_WorkGroupID.x & 1u) != 1u) != ((gl_WorkGroupID.y & 1u) == 1u)) {
-		pixel = vec4(1.0, .5, .0, 1.0);
-	} else {
-		pixel = vec4(.0, .5, 1.0, 1.0);
+	float pos_x = pos.z;
+	float pos_z = -pos.x;
+
+	float horizon = 15;
+	float scale_height = 240;
+
+	// Precalculate viewing angle parameters.
+	float sin_yaw = sin(yaw);
+	float cos_yaw = cos(yaw);
+
+	// Initialize visibility array. Y position for each column on screen.
+	int y_buffer = screen_dimensions.y;
+
+	// Draw from front to the back (low Z coordinate to high Z coordinate)
+	float z = 1.f, dz = 1.f;
+	while (z < 1000) {
+		// Find line on map. This calculation corresponds to a field of view of 90°.
+		vec2 left_point = vec2(
+			-cos_yaw * z - sin_yaw * z,
+			sin_yaw * z - cos_yaw * z
+		);
+		vec2 right_point = vec2(
+			cos_yaw * z - sin_yaw * z,
+			-sin_yaw * z  - cos_yaw * z
+		);
+
+		// Segment the line.
+		float d_x = (right_point.x - left_point.x) / screen_dimensions.x;
+		float d_y = (right_point.y - left_point.y) / screen_dimensions.x;
+
+		left_point.x += pos_x + d_x * coords.x;
+		left_point.y += pos_z + d_y * coords.x;
+
+		// Raster line and draw vertical line for each segment.
+		float height_on_screen = (pos.y - imageLoad(heightmap, get_tiling_texture_coords(ivec2(left_point))).x * 255) / z * scale_height + pitch;
+
+		vec4 color = imageLoad(colormap, get_tiling_texture_coords(ivec2(left_point)));
+
+		if (z > 600)
+			color.a = .5f;
+
+		draw_vertical_line(coords.x, int(height_on_screen), y_buffer, screen_dimensions, color);
+
+		if (height_on_screen < y_buffer) {
+			y_buffer = int(height_on_screen);
+		}
+
+		// Go to next line and increase step size when you are far away.
+		z += dz;
+		dz += .005f;
 	}
-
-	imageStore(img_output, coords, pixel);
 }

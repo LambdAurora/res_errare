@@ -17,26 +17,18 @@
 
 package dev.lambdaurora.res_errare.render.shader;
 
-import dev.lambdaurora.res_errare.resource.ResourceManager;
-import dev.lambdaurora.res_errare.resource.ResourceType;
 import dev.lambdaurora.res_errare.system.GL;
 import dev.lambdaurora.res_errare.util.Identifier;
 import dev.lambdaurora.res_errare.util.Result;
-
-import java.io.IOException;
 
 /**
  * Represents an OpenGL shader.
  */
 public record Shader(ShaderType type, int id) implements AutoCloseable {
 	public static Result<Shader, CreationException> compile(ShaderType type, Identifier shaderId) {
-		var resourceId = new Identifier(shaderId.namespace(), "shaders/" + shaderId.path() + '.' + type.extension());
+		var resourceId = new Identifier(shaderId.namespace(), shaderId.path() + '.' + type.extension());
 
-		try {
-			return compile(type, ResourceManager.getDefault(ResourceType.ASSETS).getStringFrom(resourceId));
-		} catch (IOException e) {
-			return Result.fail(new CreationException("Could not load shader " + shaderId + " of type " + type + ".", e));
-		}
+		return ShaderLoader.DEFAULT_LOADER.loadShaderSource(resourceId).then(source -> compile(type, source));
 	}
 
 	public static Result<Shader, CreationException> compile(ShaderType type, String source) {

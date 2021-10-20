@@ -17,25 +17,19 @@
 
 package dev.lambdaurora.res_errare;
 
+import dev.lambdaurora.res_errare.input.ButtonAction;
 import dev.lambdaurora.res_errare.render.Camera;
 import dev.lambdaurora.res_errare.render.GameRenderer;
 import dev.lambdaurora.res_errare.render.Skybox;
-import dev.lambdaurora.res_errare.render.buffer.BufferTarget;
-import dev.lambdaurora.res_errare.render.buffer.GraphicsBuffer;
 import dev.lambdaurora.res_errare.render.graphics.Graphics2D;
 import dev.lambdaurora.res_errare.render.shader.Shader;
 import dev.lambdaurora.res_errare.render.shader.ShaderProgram;
 import dev.lambdaurora.res_errare.render.shader.ShaderType;
-import dev.lambdaurora.res_errare.render.texture.CubeMapTexture;
-import dev.lambdaurora.res_errare.render.texture.Texture;
-import dev.lambdaurora.res_errare.render.texture.Texture2D;
-import dev.lambdaurora.res_errare.render.texture.TextureParameters;
+import dev.lambdaurora.res_errare.render.texture.*;
 import dev.lambdaurora.res_errare.system.GL;
 import dev.lambdaurora.res_errare.system.GLFW;
 import dev.lambdaurora.res_errare.util.Identifier;
-import dev.lambdaurora.res_errare.util.NativeSizes;
 import dev.lambdaurora.res_errare.window.Window;
-import jdk.incubator.foreign.MemoryAddress;
 
 import java.awt.*;
 import java.io.IOException;
@@ -48,6 +42,9 @@ public final class ResErrare {
 	private GameRenderer renderer;
 	private Skybox skybox;
 	private ShaderProgram voxelSpaceShader;
+	private Texture2D outputTexture;
+	private float yaw = 0.f;
+	private float horizon = 15.f;
 
 	public ResErrare(String title) throws IOException {
 		this.window = Window.create(640, 480, title).orElseThrow();
@@ -75,12 +72,11 @@ public final class ResErrare {
 
 	private void init() {
 		this.window.setFramebufferSizeCallback((width, height) -> {
-			this.voxelSpaceShader.use();
-			this.voxelSpaceShader.setInt("height", width);
+			this.outputTexture.initEmpty(Texture2D.Target.TEXTURE_2D, 0, Texture.InternalFormat.RGBA32F, width, height);
 			this.renderer.setupProjection(width, height);
 		});
 		this.window.setKeyCallback((key, scancode, action, mods) -> {
-			if (action == 0) {
+			if (action == ButtonAction.RELEASE) {
 				switch (key) {
 					case 256 -> this.running = false;
 					case 257 -> {
@@ -91,19 +87,20 @@ public final class ResErrare {
 			}
 		});
 
-		this.camera.setPosition(0, 0, 3);
+		this.camera.setPosition(0, 148, 3);
 
 		this.voxelSpaceShader.use();
 		this.voxelSpaceShader.setInt("heightmap", 1);
 		this.voxelSpaceShader.setInt("colormap", 2);
-		this.voxelSpaceShader.setInt("size", 512);
+		this.voxelSpaceShader.setInt("height", 50);
+		this.voxelSpaceShader.setInt("size", 1024);
 	}
 
 	public void run() {
 		GL.get().enable(GL.GL11.CULL_FACE);
 		GL.get().enable(GL.GL11.DEPTH_TEST);
 
-		Texture2D heightmapTexture, colormapTexture, outputTexture = Texture2D.of(800, 600, Texture.InternalFormat.RGBA32F);
+		Texture2D heightmapTexture, colormapTexture;
 		try {
 			heightmapTexture = Texture2D.builder(new Identifier(Constants.NAMESPACE, "textures/heightmap.png"))
 					.parameter(TextureParameters.MIN_FILTER, TextureParameters.FilterValue.NEAREST)
@@ -117,23 +114,23 @@ public final class ResErrare {
 			e.printStackTrace();
 			return;
 		}
-
-		int voxelSpaceVao = GL.get().genVertexArrays(1)[0];
-		GL.get().bindVertexArray(voxelSpaceVao);
-		var voxelSpaceVbo = GraphicsBuffer.ofStatic(BufferTarget.ARRAY, new float[]{0, 0, 0});
-		GL.get().enableVertexAttribArray(0);
-		GL.get().vertexAttribPointer(0, 3, GL.GL11.FLOAT, false, NativeSizes.FLOAT_SIZE * 3, MemoryAddress.NULL);
-		voxelSpaceVbo.unbind();
+		this.outputTexture = Texture2D.of(800, 600, Texture.InternalFormat.RGBA32F);
 
 		var graphics = Graphics2D.get();
 
+		float deltaTime; // Time between current frame and last frame.
+		float lastFrame = 0.f;
 		boolean direction = true;
 		while (this.running) {
+			float currentFrame = GLFW.getTime();
+			deltaTime = currentFrame - lastFrame;
+			lastFrame = currentFrame;
+
 			float newYaw = this.camera.getYaw() + .5f;
 			float newPitch = this.camera.getPitch() + (direction ? 1 : -1) * .25f;
 			if (newPitch > 89) direction = false;
 			else if (newPitch < -89) direction = true;
-			this.camera.setAngles(newYaw, newPitch);
+			//this.camera.setAngles(newYaw, newPitch);
 
 			this.renderer.updateView(this.camera.getViewMatrix());
 
@@ -141,20 +138,31 @@ public final class ResErrare {
 			GL.get().clearColor(0.f, 0.f, 0.f, 1.f);
 
 			this.voxelSpaceShader.use();
+			this.voxelSpaceShader.setVec3f("pos", this.camera.getPosition());
+			this.voxelSpaceShader.setFloat("yaw", (float) Math.toRadians(yaw));
+			this.voxelSpaceShader.setFloat("pitch", horizon);
 			outputTexture.bind();
 			try (var ignored = outputTexture.bindImageTexture(0, 0, GL.Access.WRITE_ONLY, Texture.InternalFormat.RGBA32F)) {
-				this.voxelSpaceShader.dispatchCompute(800, 600, 1);
+				heightmapTexture.bind();
+				var boundHeightmap = heightmapTexture.bindImageTexture(1, 0, GL.Access.READ_ONLY, Texture.InternalFormat.RGBA32F);
+				colormapTexture.bind();
+				var boundColormap = colormapTexture.bindImageTexture(2, 0, GL.Access.READ_ONLY, Texture.InternalFormat.RGBA32F);
+				var dimensions = this.window.getFramebufferSize();
+				this.voxelSpaceShader.dispatchCompute(dimensions.width(), 1, 1);
 				GL.get().memoryBarrier(GL.GL42.SHADER_IMAGE_ACCESS_BARRIER_BIT);
+				boundHeightmap.close();
+				boundColormap.close();
 			}
-			outputTexture.unbind();
+			Texture.unbind(TextureType.TEXTURE_2D);
 			ShaderProgram.useNone();
 
 			graphics.drawScreen(outputTexture);
 
-			this.render();
+			//this.render();
 
 			GLFW.pollEvents();
 			this.window.swapBuffers();
+			this.processInput(deltaTime);
 			this.running &= !this.window.shouldClose();
 		}
 
@@ -176,6 +184,47 @@ public final class ResErrare {
 
 	public void render() {
 		this.skybox.draw();
+	}
+
+	public void processInput(float deltaTime) {
+		if (this.window.getKey(' ').isPressing()) {
+			this.camera.getPosition().y++;
+		} else if (this.window.getKey(340).isPressing()) {
+			this.camera.getPosition().y--;
+		}
+
+		if (this.window.getKey('W').isPressing())
+			this.processMovement(1, deltaTime);
+		if (this.window.getKey('S').isPressing())
+			this.processMovement(2, deltaTime);
+		if (this.window.getKey('A').isPressing())
+			this.processMovement(3, deltaTime);
+		if (this.window.getKey('D').isPressing())
+			this.processMovement(4, deltaTime);
+
+		if (this.window.getKey(262).isPressing()) {
+			this.yaw--;
+			this.camera.setYaw(-this.yaw);
+		} else if (this.window.getKey(263).isPressing()) {
+			this.yaw++;
+			this.camera.setYaw(-this.yaw);
+		}
+		if (this.window.getKey(264).isPressing())
+			this.horizon -= 5f;
+		else if (this.window.getKey(265).isPressing())
+			this.horizon += 5f;
+	}
+
+	private void processMovement(int direction, float deltaTime) {
+		float velocity = /*2.5f **/ 1;
+		var front = camera.frontVector();
+		var right = camera.rightVector();
+		switch (direction) {
+			case 1 -> camera.getPosition().add(front.x * velocity, front.y * velocity, front.z * velocity);
+			case 2 -> camera.getPosition().sub(front.x * velocity, front.y * velocity, front.z * velocity);
+			case 3 -> camera.getPosition().sub(right.x * velocity, right.y * velocity, right.z * velocity);
+			case 4 -> camera.getPosition().add(right.x * velocity, right.y * velocity, right.z * velocity);
+		}
 	}
 
 	public static void terminate() {

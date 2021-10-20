@@ -25,7 +25,7 @@ public class Camera {
 	private Vector3f front;
 	private Vector3f up;
 	private Vector3f right;
-	private Vector3f worldUp;
+	private final Vector3f worldUp;
 	private final Matrix4f viewMatrix = new Matrix4f();
 
 	private float yaw;
@@ -52,6 +52,14 @@ public class Camera {
 
 	public Vector3f getPosition() {
 		return this.position;
+	}
+
+	public Vector3f frontVector() {
+		return this.front;
+	}
+
+	public Vector3f rightVector() {
+		return this.right;
 	}
 
 	/**

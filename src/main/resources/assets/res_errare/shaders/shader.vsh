@@ -7,10 +7,7 @@ layout (location = 2) in vec2 aTexCoords;
 out vec3 normal;
 out vec2 texture_coords;
 
-layout (std140) uniform matrices {
-	mat4 projection;
-	mat4 view;
-};
+#include res_errare:common_matrices.glsl
 uniform mat4 model;
 
 void main() {

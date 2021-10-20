@@ -480,6 +480,16 @@ public final class GL {
 		}
 	}
 
+	public void uniform3f(int location, float x, float y, float z) {
+		try {
+			this.getFunction("glUniform3f",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, float.class, float.class, float.class)
+			).invokeExact(location, x, y, z);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
+
 	public void uniformMatrix4fv(int location, boolean transpose, Matrix4f value) {
 		try (var scope = ResourceScope.newConfinedScope()) {
 			var allocator = SegmentAllocator.ofScope(scope);

@@ -17,6 +17,8 @@
 
 package dev.lambdaurora.res_errare.util;
 
+import dev.lambdaurora.res_errare.Constants;
+
 import java.util.Objects;
 
 public class Identifier {
@@ -25,6 +27,14 @@ public class Identifier {
 
 	private final String namespace;
 	private final String path;
+
+	private Identifier(String[] parts) {
+		this(parts[0], parts[1]);
+	}
+
+	public Identifier(String id) {
+		this(splitRaw(id));
+	}
 
 	public Identifier(String namespace, String path) {
 		check(namespace, path);
@@ -52,6 +62,16 @@ public class Identifier {
 		return this.concat(separator + subPath);
 	}
 
+	public Identifier prepend(String path) {
+		return new Identifier(this.namespace, concatPath(path, this.path));
+	}
+
+	public static String concatPath(String first, String second) {
+		if (first.endsWith("/"))
+			return first + second;
+		return first + '/' + second;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
@@ -68,6 +88,17 @@ public class Identifier {
 	@Override
 	public String toString() {
 		return this.namespace + ':' + this.path;
+	}
+
+	private static String[] splitRaw(String raw) {
+		var split = raw.split(":");
+
+		if (split.length == 1)
+			return new String[]{Constants.NAMESPACE, raw};
+		else if (split.length > 2)
+			throw new InvalidIdentifierException("Found more than one namespace-path separator.");
+
+		return split;
 	}
 
 	private static void check(String namespace, String path) {

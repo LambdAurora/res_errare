@@ -17,6 +17,7 @@
 
 package dev.lambdaurora.res_errare.system;
 
+import dev.lambdaurora.res_errare.input.ButtonAction;
 import dev.lambdaurora.res_errare.system.callback.GLFWFramebufferSizeCallback;
 import dev.lambdaurora.res_errare.util.math.Dimensions2D;
 import jdk.incubator.foreign.*;
@@ -54,6 +55,11 @@ public final class GLFW {
 	@SuppressWarnings("unchecked")
 	private static <T> NativeFunction<T> getFunction(String name, Function<String, NativeFunction<T>> linker) {
 		return (NativeFunction<T>) FUNCTIONS.computeIfAbsent(name, linker);
+	}
+
+	public static float getTime() {
+		return getFunction("glfwGetTime", name -> NativeFunction.of(name, float.class, new Class[0], FunctionDescriptor.of(CLinker.C_FLOAT)))
+				.invoke();
 	}
 
 	/* Context stuff */
@@ -185,6 +191,18 @@ public final class GLFW {
 	}
 
 	/* Input stuff */
+
+	public static ButtonAction getKey(MemoryAddress window, int key) {
+		try {
+			return ButtonAction.byId(
+					(int) getFunction("glfwGetKey", name -> NativeFunction.of(name, int.class, new Class[]{MemoryAddress.class, int.class},
+							FunctionDescriptor.of(CLinker.C_INT, CLinker.C_POINTER, CLinker.C_INT)))
+							.handle().invoke(window, key)
+			);
+		} catch (Throwable e) {
+			throw new NativeFunction.FunctionInvocationException(e);
+		}
+	}
 
 	public static void setKeyCallback(MemoryAddress window, MemoryAddress callback) {
 		try {

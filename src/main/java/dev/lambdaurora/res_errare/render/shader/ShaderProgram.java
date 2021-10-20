@@ -20,6 +20,7 @@ package dev.lambdaurora.res_errare.render.shader;
 import dev.lambdaurora.res_errare.system.GL;
 import dev.lambdaurora.res_errare.util.Result;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +45,10 @@ public record ShaderProgram(int id) implements AutoCloseable {
 
 	public void setFloat(String name, float value) {
 		GL.get().uniform1f(this.getUniformLocation(name), value);
+	}
+
+	public void setVec3f(String name, Vector3f value) {
+		GL.get().uniform3f(this.getUniformLocation(name), value.x(), value.y(), value.z());
 	}
 
 	public void setMatrix4f(String name, Matrix4f value) {

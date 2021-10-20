@@ -3,10 +3,7 @@ layout (location = 0) in vec3 aPos;
 
 out vec3 texture_coords;
 
-layout (std140) uniform matrices {
-	mat4 projection;
-	mat4 view;
-};
+#include res_errare:common_matrices.glsl
 
 uniform float scale = 1.f;
 
