@@ -50,7 +50,7 @@ public final class ResErrare {
 		this.window = Window.create(640, 480, title).orElseThrow();
 
 		this.window.makeContextCurrent();
-		GLFW.swapInterval(1);
+		GLFW.swapInterval(0);
 
 		System.out.println("Using: " + GL.get().getString(GL.GL11.RENDERER));
 
@@ -156,9 +156,9 @@ public final class ResErrare {
 			Texture.unbind(TextureType.TEXTURE_2D);
 			ShaderProgram.useNone();
 
-			graphics.drawScreen(outputTexture);
-
 			//this.render();
+
+			graphics.drawScreen(outputTexture);
 
 			GLFW.pollEvents();
 			this.window.swapBuffers();

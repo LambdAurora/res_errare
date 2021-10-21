@@ -16,7 +16,8 @@ void main() {
 	if (color.a > .9f) {
 		FragColor = color;
 		return;
-	}
+	} else if (color.a == 0.f)
+		discard;
 
 	vec2 offsets[9] = vec2[](
 		vec2(-offset,  offset), // top-left
@@ -38,7 +39,7 @@ void main() {
 
 	vec3 sample_texture[9];
 	for(int i = 0; i < 9; i++) {
-		sample_texture[i] = vec3(texture(screen_texture, texture_coords.st + offsets[i]));
+		sample_texture[i] = blend_colors(vec4(1.0, 1.0, 1.0, color.a), vec4(texture(screen_texture, texture_coords.st + offsets[i]).rgb, 1.0)).rgb;
 	}
 	vec3 col = vec3(0.0);
 	for(int i = 0; i < 9; i++)

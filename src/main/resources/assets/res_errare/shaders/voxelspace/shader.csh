@@ -1,5 +1,7 @@
 #version 430
 
+#include res_errare:math.glsl
+
 layout (local_size_x = 1, local_size_y = 1) in;
 
 layout (rgba32f, binding = 0) uniform writeonly image2D img_output;
@@ -9,6 +11,8 @@ uniform int size;
 uniform vec3 pos;
 uniform float yaw;
 uniform float pitch;
+
+const float render_distance = 2000;
 
 int get_tiling_texture_coord(int absolute_coord) {
 	return absolute_coord % size;
@@ -26,36 +30,12 @@ void draw_vertical_line(int x, int y0, int y1, ivec2 size, vec4 color) {
 	}
 }
 
-float max_rgb(vec4 color) {
-	float max = color.r;
-	if (max < color.g)
-		max = color.g;
-	if (max < color.b)
-		max = color.b;
-	return max;
-}
-
-vec4 distribute_rgb(vec4 color) {
-	float threshold = 0.999f;
-	float m = max_rgb(color);
-	if (m <= threshold)
-		return color;
-
-	float total = color.r + color.g + color.b;
-	if (total >= 3 * threshold)
-		return vec4(threshold, threshold, threshold, 1.f);
-
-	float x = (3.f * threshold - total) / (3.f * m - total);
-	float gray = threshold - x * m;
-	return vec4(gray + x * color.r, gray + x * color.g, gray + x * color.b, 1.f);
-}
-
 void main() {
 	// gl_LocalInvocationID.xy * gl_WorkGroupID.xy == gl_GlobalInvocationID
 	ivec2 coords = ivec2(gl_GlobalInvocationID);
 	ivec2 screen_dimensions = imageSize(img_output);
 
-	draw_vertical_line(coords.x, 0, screen_dimensions.y, screen_dimensions, vec4(0.1f, 0.3f, 1.f, 1.f));
+	draw_vertical_line(coords.x, 0, screen_dimensions.y, screen_dimensions, vec4(0.1f, 0.3f, 1.f, 0.f));
 
 	float pos_x = pos.z;
 	float pos_z = -pos.x;
@@ -70,9 +50,11 @@ void main() {
 	// Initialize visibility array. Y position for each column on screen.
 	int y_buffer = screen_dimensions.y;
 
+	float fog_length = render_distance - 850;
+
 	// Draw from front to the back (low Z coordinate to high Z coordinate)
 	float z = 1.f, dz = 1.f;
-	while (z < 1000) {
+	while (z < render_distance) {
 		// Find line on map. This calculation corresponds to a field of view of 90°.
 		vec2 left_point = vec2(
 			-cos_yaw * z - sin_yaw * z,
@@ -95,8 +77,10 @@ void main() {
 
 		vec4 color = imageLoad(colormap, get_tiling_texture_coords(ivec2(left_point)));
 
-		if (z > 600)
-			color.a = .5f;
+		float distance_from_camera = distance_with(vec2(pos_x, pos_z), left_point);
+		if (distance_from_camera > 850) {
+			color.a = min((distance_from_camera - 850) / fog_length, .9f);
+		}
 
 		draw_vertical_line(coords.x, int(height_on_screen), y_buffer, screen_dimensions, color);
 
