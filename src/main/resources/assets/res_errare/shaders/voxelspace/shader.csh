@@ -89,7 +89,9 @@ void main() {
 		}
 
 		// Go to next line and increase step size when you are far away.
+		dz *= 1.006;
+		dz += 0.0001;
 		z += dz;
-		dz += .005f;
+		//dz += .005f;
 	}
 }

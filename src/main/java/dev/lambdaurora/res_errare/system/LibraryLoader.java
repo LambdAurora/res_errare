@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 public final class LibraryLoader {
 	private static final String ARCH = System.getProperty("os.arch");
@@ -79,6 +80,10 @@ public final class LibraryLoader {
 				descriptor);
 	}
 
+	public static Function<MemoryAddress, MethodHandle> getNoArgFunctionProvider(Class<?> returnType) {
+		return address -> getFunctionHandle(address, returnType);
+	}
+
 	public static MemoryLayout[] mapTypesToLayout(Class<?>... types) {
 		var layouts = new MemoryLayout[types.length];
 
@@ -95,7 +100,7 @@ public final class LibraryLoader {
 			return CLinker.C_LONG;
 		} else if (type == float.class) {
 			return CLinker.C_FLOAT;
-		} else if (Addressable.class.isAssignableFrom(type)) {
+		} else if (Addressable.class.isAssignableFrom(type) || type == String.class) {
 			return CLinker.C_POINTER;
 		} else {
 			throw new IllegalArgumentException("Cannot determine memory layout of type " + type + ".");

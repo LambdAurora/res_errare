@@ -15,27 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dev.lambdaurora.res_errare.parser.token;
+package dev.lambdaurora.res_errare.system;
 
-/**
- * Represents an unknown token exception.
- * <p>
- * Thrown when the lexer encounters a non-whitespace character and cannot associate it with a token type.
- */
-public class UnknownTokenException extends RuntimeException {
-	private final int errorOffset;
-
-	public UnknownTokenException(String message, int errorOffset) {
+public class NativeFunctionInvocationException extends RuntimeException {
+	public NativeFunctionInvocationException(String message) {
 		super(message);
-		this.errorOffset = errorOffset;
 	}
 
-	/**
-	 * Gets the offset in the input string where the error happened.
-	 *
-	 * @return the error offset
-	 */
-	public int getErrorOffset() {
-		return this.errorOffset;
+	public NativeFunctionInvocationException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
+	public NativeFunctionInvocationException(Throwable cause) {
+		super(cause);
+	}
+
+	public NativeFunctionInvocationException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+		super(message, cause, enableSuppression, writableStackTrace);
 	}
 }

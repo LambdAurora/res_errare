@@ -59,14 +59,18 @@ public class Graphics2D {
 		return self;
 	}
 
-	public void drawScreen(Texture<?> texture) {
-		this.framebufferShader.use();
+	public void drawScreenWith(Texture<?> texture, ShaderProgram program) {
+		program.use();
 		GL.get().activeTexture(GL.GL13.TEXTURE0);
 		texture.bind();
 		this.screenQuadVao.draw(GeometricPrimitive.TRIANGLES, 0, 6);
 	}
 
-	private static final Identifier FRAMEBUFFER_SHADER_ID = new Identifier(Constants.NAMESPACE, "framebuffer");
+	public void drawScreen(Texture<?> texture) {
+		this.drawScreenWith(texture, this.framebufferShader);
+	}
+
+	public static final Identifier FRAMEBUFFER_SHADER_ID = new Identifier(Constants.NAMESPACE, "framebuffer");
 
 	private static final float[] TEXTURED_QUAD_VERTICES = {
 			// positions (2) ; texture coords (2)

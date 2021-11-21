@@ -26,6 +26,7 @@ import dev.lambdaurora.res_errare.render.texture.Image;
 import dev.lambdaurora.res_errare.render.texture.Texture;
 import dev.lambdaurora.res_errare.render.texture.TextureType;
 import dev.lambdaurora.res_errare.util.NativeSizes;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import jdk.incubator.foreign.*;
 import org.joml.Matrix4f;
 
@@ -37,7 +38,7 @@ import java.util.function.Function;
 
 public final class GL {
 	private static GL self;
-	private final Map<String, MethodHandle> functions = new HashMap<>();
+	private final Map<String, MethodHandle> functions = new Object2ObjectOpenHashMap<>();
 	private final FunctionFetcher functionFetcher;
 
 	private GL(FunctionFetcher functionFetcher) {
@@ -62,7 +63,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class)
 			).invokeExact(param);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -79,7 +80,7 @@ public final class GL {
 							FunctionDescriptor.ofVoid(CLinker.C_FLOAT, CLinker.C_FLOAT, CLinker.C_FLOAT, CLinker.C_FLOAT)))
 					.invokeExact(red, green, blue, alpha);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -96,7 +97,7 @@ public final class GL {
 			this.getFunction("glDrawArrays", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class))
 					.invokeExact(mode.glId(), first, count);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -116,7 +117,7 @@ public final class GL {
 
 			return CLinker.toJavaString(res);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -125,7 +126,7 @@ public final class GL {
 			this.getFunction("glPolygonMode", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class))
 					.invokeExact(face, mode);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -134,7 +135,7 @@ public final class GL {
 			this.getFunction("glViewport", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, int.class))
 					.invokeExact(x, y, width, height);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -152,7 +153,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
 			).invokeExact(type.glId(), vbo);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -168,7 +169,7 @@ public final class GL {
 
 			return cBuffers.toIntArray();
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -182,7 +183,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
 			).invokeExact(buffers.length, cBuffers.address());
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -202,7 +203,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, long.class, MemoryAddress.class, int.class)
 			).invokeExact(type.glId(), size, dataAddress, usage.glId());
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -222,7 +223,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, long.class, long.class, MemoryAddress.class)
 			).invokeExact(type.glId(), offset, size, dataAddress);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -234,7 +235,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
 			).invokeExact(type.glId(), texture);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -250,7 +251,7 @@ public final class GL {
 
 			return cTextures.toIntArray();
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -264,7 +265,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
 			).invokeExact(textures.length, cTextures.address());
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -274,7 +275,7 @@ public final class GL {
 
 			this.texImage2D(target, level, internalFormat, image.width(), image.height(), image.format(), GL11.UNSIGNED_BYTE, imgData);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -286,7 +287,7 @@ public final class GL {
 									int.class, int.class, int.class, int.class, MemoryAddress.class))
 					.invokeExact(target.glId(), level, internalFormat.glId(), width, height, 0, format.glFormatId(), type, data);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -295,7 +296,7 @@ public final class GL {
 			this.getFunction("glTexParameteri", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class))
 					.invokeExact(target.glId(), paramName.glId(), value);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -304,7 +305,7 @@ public final class GL {
 			this.getFunction("glTexParameterf", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, float.class))
 					.invokeExact(target.glId(), paramName.glId(), value);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -314,7 +315,7 @@ public final class GL {
 							MethodType.methodType(int.class, int.class), FunctionDescriptor.of(CLinker.C_INT, CLinker.C_INT)))
 					.invokeExact(type.glId());
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -337,7 +338,7 @@ public final class GL {
 			var sourceArray = allocator.allocateArray(MemoryLayouts.ADDRESS, cSource);
 			function.invokeExact(shader, source.length, sourceArray.address(), MemoryAddress.NULL);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -359,7 +360,7 @@ public final class GL {
 
 			return resultPtr.toIntArray()[0];
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -375,7 +376,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, int.class)
 			).invokeExact();
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -389,7 +390,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
 			).invokeExact(program, shader);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -399,7 +400,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
 			).invokeExact(program, shader);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -421,7 +422,7 @@ public final class GL {
 
 			return resultPtr.toIntArray()[0];
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -442,7 +443,7 @@ public final class GL {
 
 			return CLinker.toJavaString(logSegment);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -456,7 +457,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, int.class, int.class, MemoryAddress.class)
 			).invokeExact(program, CLinker.toCString(name, scope).address());
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -466,7 +467,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
 			).invokeExact(location, value);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -476,7 +477,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, float.class)
 			).invokeExact(location, value);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -486,7 +487,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, float.class, float.class, float.class)
 			).invokeExact(location, x, y, z);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -498,7 +499,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, MemoryAddress.class)
 			).invokeExact(location, 1, transpose ? 1 : 0, Matrix4fBufferRange.NO_OFFSET.createSegment(allocator, value).address());
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -512,7 +513,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, int.class, int.class, MemoryAddress.class)
 			).invokeExact(index, size, type, normalized ? 1 : 0, (int) stride, pointer);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -534,7 +535,7 @@ public final class GL {
 
 			return cVertexArrays.toIntArray();
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -548,7 +549,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, MemoryAddress.class)
 			).invokeExact(vertexArrays.length, cVertexArrays.address());
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -558,7 +559,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, long.class, long.class)
 			).invokeExact(target.glId(), index, buffer, offset, size);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -574,7 +575,7 @@ public final class GL {
 					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class)
 			).invokeExact(unit, texture, level, layered ? 1 : 0, layer, access.glId(), format.glId());
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -583,7 +584,7 @@ public final class GL {
 			this.getFunction("glDispatchCompute", address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class, int.class))
 					.invokeExact(numGroupsX, numGroupsY, numGroupsZ);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 

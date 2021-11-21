@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2021 LambdAurora <aurora42lambda@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package dev.lambdaurora.res_errare.render.shader;
 
 import dev.lambdaurora.res_errare.parser.token.UnknownTokenException;
@@ -28,7 +45,7 @@ public record ShaderLoader(ResourceManager resourceManager) {
 		try {
 			var source = this.getRawShaderSource(shaderId);
 
-			return preprocessSource(source).mapError(Shader.CreationException::new);
+			return this.preprocessSource(source).mapError(Shader.CreationException::new);
 		} catch (IOException e) {
 			return Result.fail(new Shader.CreationException("Could not loader shader " + shaderId + ".", e));
 		}
@@ -62,7 +79,7 @@ public record ShaderLoader(ResourceManager resourceManager) {
 								if (loadedShader.hasError())
 									return loadedShader.mapError(ShaderPreprocessError::new);
 
-								processedSource.append('\n').append(loadedShader.get());
+								processedSource.append('\n').append(loadedShader.get()).append('\n');
 							} catch (InvalidIdentifierException e) {
 								return Result.fail(new ShaderPreprocessError("Cannot include shader " + params[0] + " as the given identifier is invalid.", e));
 							}
@@ -87,7 +104,7 @@ public record ShaderLoader(ResourceManager resourceManager) {
 			}
 		}
 
-		return Result.ok(processedSource.toString());
+		return Result.ok(processedSource.append('\n').toString());
 	}
 
 	private Result<PreProcessorDirective, ShaderPreprocessError> readPreprocessorDirective(String line) {

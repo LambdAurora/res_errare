@@ -20,9 +20,10 @@ package dev.lambdaurora.res_errare.system;
 import dev.lambdaurora.res_errare.input.ButtonAction;
 import dev.lambdaurora.res_errare.system.callback.GLFWFramebufferSizeCallback;
 import dev.lambdaurora.res_errare.util.math.Dimensions2D;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import jdk.incubator.foreign.*;
 
-import java.util.HashMap;
+import java.lang.invoke.MethodHandle;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -32,55 +33,72 @@ public final class GLFW {
 	public static final int OPENGL_PROFILE = 0x00022008;
 	public static final int OPENGL_CORE_PROFILE = 0x00032001;
 
-	private static final Map<String, NativeFunction<?>> FUNCTIONS = new HashMap<>();
+	private static final Map<String, MethodHandle> FUNCTIONS = new Object2ObjectOpenHashMap<>();
 	// @TODO this is very stupid, needs to be stored with the window directly
 	private static MemoryAddress currentFramebufferSizeCallback = MemoryAddress.NULL;
 
 	public static void init() {
 		LibraryLoader.loadLibrary("glfw");
 
-		if (NativeFunction.of("glfwInit", int.class, FunctionDescriptor.of(CLinker.C_INT))
-				.invoke() == 0)
-			throw new RuntimeException(("Could not initialize GLFW."));
+		try {
+			if ((int) getFunction("glfwInit", LibraryLoader.getNoArgFunctionProvider(int.class))
+					.invokeExact() == 0)
+				throw new RuntimeException(("Could not initialize GLFW."));
+		} catch (Throwable e) {
+			throw new NativeFunctionInvocationException(e);
+		}
 	}
 
 	public static void terminate() {
-		NativeFunction.ofVoid("glfwTerminate").invoke();
+		try {
+			getFunction("glfwTerminate", LibraryLoader.getNoArgFunctionProvider(void.class))
+					.invokeExact();
+		} catch (Throwable e) {
+			throw new NativeFunctionInvocationException(e);
+		}
 	}
 
 	public static void pollEvents() {
-		NativeFunction.ofVoid("glfwPollEvents").invoke();
+		try {
+			getFunction("glfwPollEvents", LibraryLoader.getNoArgFunctionProvider(void.class))
+					.invokeExact();
+		} catch (Throwable e) {
+			throw new NativeFunctionInvocationException(e);
+		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private static <T> NativeFunction<T> getFunction(String name, Function<String, NativeFunction<T>> linker) {
-		return (NativeFunction<T>) FUNCTIONS.computeIfAbsent(name, linker);
+	private static MethodHandle getFunction(String name, Function<MemoryAddress, MethodHandle> linker) {
+		return FUNCTIONS.computeIfAbsent(name, n -> linker.apply(LibraryLoader.lookupSymbol(n)));
 	}
 
 	public static float getTime() {
-		return getFunction("glfwGetTime", name -> NativeFunction.of(name, float.class, new Class[0], FunctionDescriptor.of(CLinker.C_FLOAT)))
-				.invoke();
+		try {
+			return (float) getFunction("glfwGetTime", LibraryLoader.getNoArgFunctionProvider(float.class))
+					.invokeExact();
+		} catch (Throwable e) {
+			throw new NativeFunctionInvocationException(e);
+		}
 	}
 
 	/* Context stuff */
 
 	public static MemoryAddress getProcAddress(String symbolName) {
 		try (var scope = ResourceScope.newConfinedScope()) {
-			return (MemoryAddress) getFunction("glfwGetProcAddress", name -> NativeFunction.of(name,
-					MemoryAddress.class, new Class[]{MemoryAddress.class}, FunctionDescriptor.of(CLinker.C_POINTER, CLinker.C_POINTER)))
-					.handle().invoke(CLinker.toCString(symbolName, scope).address());
+			return (MemoryAddress) getFunction("glfwGetProcAddress",
+					address -> LibraryLoader.getFunctionHandle(address, MemoryAddress.class, MemoryAddress.class)
+			).invokeExact(CLinker.toCString(symbolName, scope).address());
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
 	public static void swapInterval(int interval) {
 		try {
-			getFunction("glfwSwapInterval", name -> NativeFunction.of(name,
-					void.class, new Class[]{int.class}, FunctionDescriptor.ofVoid(CLinker.C_INT)))
-					.handle().invoke(interval);
+			getFunction("glfwSwapInterval",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class)
+			).invokeExact(interval);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -88,54 +106,52 @@ public final class GLFW {
 
 	public static void windowHint(int hint, int value) {
 		try {
-			getFunction("glfwWindowHint", name -> NativeFunction.of(name,
-					void.class, new Class[]{int.class, int.class},
-					FunctionDescriptor.ofVoid(CLinker.C_INT, CLinker.C_INT)
-			)).handle().invokeExact(hint, value);
+			getFunction("glfwWindowHint",
+					address -> LibraryLoader.getFunctionHandle(address, void.class, int.class, int.class)
+			).invokeExact(hint, value);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException("Could not invoke function glfwWindowHint: ", e);
+			throw new NativeFunctionInvocationException("Could not invoke function glfwWindowHint: ", e);
 		}
 	}
 
 	public static MemoryAddress createWindow(int width, int height, String title, MemoryAddress monitor, MemoryAddress share) {
-		var function = getFunction("glfwCreateWindow", name -> NativeFunction.of(name,
-				MemoryAddress.class, new Class[]{int.class, int.class, MemoryAddress.class, MemoryAddress.class, MemoryAddress.class},
-				FunctionDescriptor.of(CLinker.C_POINTER, CLinker.C_INT, CLinker.C_INT, CLinker.C_POINTER, CLinker.C_POINTER, CLinker.C_POINTER)
-		));
+		var function = getFunction("glfwCreateWindow", address -> LibraryLoader.getFunctionHandle(address,
+				MemoryAddress.class, int.class, int.class, MemoryAddress.class, MemoryAddress.class, MemoryAddress.class)
+		);
 
 		try (var scope = ResourceScope.newConfinedScope()) {
 			var nativeTitle = CLinker.toCString(title, scope);
-			return (MemoryAddress) function.handle().invoke(width, height, nativeTitle.address(), monitor, share);
+			return (MemoryAddress) function.invokeExact(width, height, nativeTitle.address(), monitor, share);
 		} catch (Throwable throwable) {
-			throw new NativeFunction.FunctionInvocationException("Could not invoke function glfwCreateWindow: ", throwable);
+			throw new NativeFunctionInvocationException("Could not invoke function glfwCreateWindow: ", throwable);
 		}
 	}
 
 	public static void destroyWindow(MemoryAddress window) {
 		try {
-			getFunction("glfwDestroyWindow", name -> NativeFunction.of(name,
-					void.class, new Class[]{MemoryAddress.class}, FunctionDescriptor.ofVoid(CLinker.C_POINTER)))
-					.handle().invoke(window);
+			getFunction("glfwDestroyWindow", address -> LibraryLoader.getFunctionHandle(address,
+					void.class, MemoryAddress.class)
+			).invokeExact(window);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
 	public static void makeContextCurrent(MemoryAddress window) {
 		try {
-			getFunction("glfwMakeContextCurrent", name -> NativeFunction.of(name,
-					void.class, new Class[]{MemoryAddress.class}, FunctionDescriptor.ofVoid(CLinker.C_POINTER)))
-					.handle().invoke(window);
+			getFunction("glfwMakeContextCurrent", address -> LibraryLoader.getFunctionHandle(address,
+					void.class, MemoryAddress.class)
+			).invokeExact(window);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
 	public static boolean windowShouldClose(MemoryAddress address) {
 		try {
-			return (int) getFunction("glfwWindowShouldClose", name -> NativeFunction.of(name,
-					int.class, new Class[]{MemoryAddress.class}, FunctionDescriptor.of(CLinker.C_INT, CLinker.C_POINTER)))
-					.handle().invoke(address) != 0;
+			return (int) getFunction("glfwWindowShouldClose", addr -> LibraryLoader.getFunctionHandle(addr,
+					int.class, MemoryAddress.class)
+			).invokeExact(address) != 0;
 		} catch (Throwable e) {
 			return false;
 		}
@@ -148,14 +164,13 @@ public final class GLFW {
 			var widthSegment = allocator.allocate(CLinker.C_INT);
 			var heightSegment = allocator.allocate(CLinker.C_INT);
 
-			getFunction("glfwGetFramebufferSize", name -> NativeFunction.of(name, void.class,
-					new Class[]{MemoryAddress.class, MemoryAddress.class, MemoryAddress.class},
-					FunctionDescriptor.ofVoid(CLinker.C_POINTER, CLinker.C_POINTER, CLinker.C_POINTER)))
-					.handle().invoke(window, widthSegment.address(), heightSegment.address());
+			getFunction("glfwGetFramebufferSize", address -> LibraryLoader.getFunctionHandle(address, void.class,
+					MemoryAddress.class, MemoryAddress.class, MemoryAddress.class)
+			).invokeExact(window, widthSegment.address(), heightSegment.address());
 
 			return new Dimensions2D(widthSegment.toIntArray()[0], heightSegment.toIntArray()[0]);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -171,22 +186,21 @@ public final class GLFW {
 					ResourceScope.globalScope()
 			);
 
-			getFunction("glfwSetFramebufferSizeCallback", name -> NativeFunction.of(name, void.class,
-					new Class[]{MemoryAddress.class, MemoryAddress.class},
-					FunctionDescriptor.ofVoid(CLinker.C_POINTER, CLinker.C_POINTER)))
-					.handle().invoke(window, currentFramebufferSizeCallback);
+			getFunction("glfwSetFramebufferSizeCallback", address -> LibraryLoader.getFunctionHandle(address, void.class,
+					MemoryAddress.class, MemoryAddress.class)
+			).invokeExact(window, currentFramebufferSizeCallback);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
 	public static void swapBuffers(MemoryAddress window) {
 		try {
-			getFunction("glfwSwapBuffers", name -> NativeFunction.of(name,
-					void.class, new Class[]{MemoryAddress.class}, FunctionDescriptor.ofVoid(CLinker.C_POINTER)))
-					.handle().invoke(window);
+			getFunction("glfwSwapBuffers", address -> LibraryLoader.getFunctionHandle(address,
+					void.class, MemoryAddress.class)
+			).invokeExact(window);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
@@ -195,23 +209,22 @@ public final class GLFW {
 	public static ButtonAction getKey(MemoryAddress window, int key) {
 		try {
 			return ButtonAction.byId(
-					(int) getFunction("glfwGetKey", name -> NativeFunction.of(name, int.class, new Class[]{MemoryAddress.class, int.class},
-							FunctionDescriptor.of(CLinker.C_INT, CLinker.C_POINTER, CLinker.C_INT)))
-							.handle().invoke(window, key)
+					(int) getFunction("glfwGetKey", address -> LibraryLoader.getFunctionHandle(address,
+							int.class, MemoryAddress.class, int.class)
+					).invokeExact(window, key)
 			);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 
 	public static void setKeyCallback(MemoryAddress window, MemoryAddress callback) {
 		try {
-			getFunction("glfwSetKeyCallback", name -> NativeFunction.of(name, void.class,
-					new Class[]{MemoryAddress.class, MemoryAddress.class},
-					FunctionDescriptor.ofVoid(CLinker.C_POINTER, CLinker.C_POINTER)))
-					.handle().invoke(window, callback);
+			getFunction("glfwSetKeyCallback", address -> LibraryLoader.getFunctionHandle(address,
+					void.class, MemoryAddress.class, MemoryAddress.class)
+			).invokeExact(window, callback);
 		} catch (Throwable e) {
-			throw new NativeFunction.FunctionInvocationException(e);
+			throw new NativeFunctionInvocationException(e);
 		}
 	}
 }

@@ -1,8 +1,0 @@
-# Made in Blockbench 3.8.2
-newmtl m_plate
-map_Kd plate.png 
-newmtl m_side
-map_Kd side.png 
-newmtl m_coal
-map_Kd coal.png 
-newmtl none

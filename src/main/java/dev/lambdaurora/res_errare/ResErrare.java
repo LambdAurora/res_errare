@@ -41,10 +41,12 @@ public final class ResErrare {
 	private Camera camera = new Camera();
 	private GameRenderer renderer;
 	private Skybox skybox;
+	private ShaderProgram voxelSpaceComputeShader;
 	private ShaderProgram voxelSpaceShader;
 	private Texture2D outputTexture;
 	private float yaw = 0.f;
 	private float horizon = 15.f;
+	private int dirty = 2;
 
 	public ResErrare(String title) throws IOException {
 		this.window = Window.create(640, 480, title).orElseThrow();
@@ -57,14 +59,18 @@ public final class ResErrare {
 		this.renderer = new GameRenderer();
 
 		this.skybox = Skybox.of(CubeMapTexture.builder()
-						.facesFromDirectory(new Identifier(Constants.NAMESPACE, "textures/skybox"), "jpg")
+						.facesFromDirectory(new Identifier("textures/skybox"), "jpg")
 						.withCleanup()
 						.build())
 				.getOrThrow();
 		this.skybox.scale(50.f);
 
+		this.voxelSpaceComputeShader = ShaderProgram.builder()
+				.shader(Shader.compile(ShaderType.COMPUTE, new Identifier("voxelspace/shader")))
+				.build().getOrThrow();
 		this.voxelSpaceShader = ShaderProgram.builder()
-				.shader(Shader.compile(ShaderType.COMPUTE, new Identifier(Constants.NAMESPACE, "voxelspace/shader")))
+				.shader(Shader.compile(ShaderType.FRAGMENT, new Identifier("voxelspace/shader")))
+				.shader(Shader.compile(ShaderType.VERTEX, Graphics2D.FRAMEBUFFER_SHADER_ID))
 				.build().getOrThrow();
 
 		this.init();
@@ -89,11 +95,11 @@ public final class ResErrare {
 
 		this.camera.setPosition(0, 148, 3);
 
-		this.voxelSpaceShader.use();
-		this.voxelSpaceShader.setInt("heightmap", 1);
-		this.voxelSpaceShader.setInt("colormap", 2);
-		this.voxelSpaceShader.setInt("height", 50);
-		this.voxelSpaceShader.setInt("size", 1024);
+		this.voxelSpaceComputeShader.use();
+		this.voxelSpaceComputeShader.setInt("heightmap", 1);
+		this.voxelSpaceComputeShader.setInt("colormap", 2);
+		this.voxelSpaceComputeShader.setInt("height", 50);
+		this.voxelSpaceComputeShader.setInt("size", 1024);
 	}
 
 	public void run() {
@@ -102,11 +108,11 @@ public final class ResErrare {
 
 		Texture2D heightmapTexture, colormapTexture;
 		try {
-			heightmapTexture = Texture2D.builder(new Identifier(Constants.NAMESPACE, "textures/heightmap.png"))
+			heightmapTexture = Texture2D.builder(new Identifier("textures/heightmap.png"))
 					.parameter(TextureParameters.MIN_FILTER, TextureParameters.FilterValue.NEAREST)
 					.parameter(TextureParameters.MAG_FILTER, TextureParameters.FilterValue.NEAREST)
 					.build();
-			colormapTexture = Texture2D.builder(new Identifier(Constants.NAMESPACE, "textures/colormap.png"))
+			colormapTexture = Texture2D.builder(new Identifier("textures/colormap.png"))
 					.parameter(TextureParameters.MIN_FILTER, TextureParameters.FilterValue.NEAREST)
 					.parameter(TextureParameters.MAG_FILTER, TextureParameters.FilterValue.NEAREST)
 					.build();
@@ -137,28 +143,32 @@ public final class ResErrare {
 			GL.get().clear(GL.GL11.COLOR_BUFFER_BIT | GL.GL11.DEPTH_BUFFER_BIT);
 			GL.get().clearColor(0.f, 0.f, 0.f, 1.f);
 
-			this.voxelSpaceShader.use();
-			this.voxelSpaceShader.setVec3f("pos", this.camera.getPosition());
-			this.voxelSpaceShader.setFloat("yaw", (float) Math.toRadians(yaw));
-			this.voxelSpaceShader.setFloat("pitch", horizon);
-			outputTexture.bind();
-			try (var ignored = outputTexture.bindImageTexture(0, 0, GL.Access.WRITE_ONLY, Texture.InternalFormat.RGBA32F)) {
-				heightmapTexture.bind();
-				var boundHeightmap = heightmapTexture.bindImageTexture(1, 0, GL.Access.READ_ONLY, Texture.InternalFormat.RGBA32F);
-				colormapTexture.bind();
-				var boundColormap = colormapTexture.bindImageTexture(2, 0, GL.Access.READ_ONLY, Texture.InternalFormat.RGBA32F);
-				var dimensions = this.window.getFramebufferSize();
-				this.voxelSpaceShader.dispatchCompute(dimensions.width(), 1, 1);
-				GL.get().memoryBarrier(GL.GL42.SHADER_IMAGE_ACCESS_BARRIER_BIT);
-				boundHeightmap.close();
-				boundColormap.close();
+			if (this.dirty != 0) {
+				this.voxelSpaceComputeShader.use();
+				this.voxelSpaceComputeShader.setVec3f("pos", this.camera.getPosition());
+				this.voxelSpaceComputeShader.setFloat("yaw", (float) Math.toRadians(yaw));
+				this.voxelSpaceComputeShader.setFloat("pitch", horizon);
+				outputTexture.bind();
+				try (var ignored = outputTexture.bindImageTexture(0, 0, GL.Access.WRITE_ONLY, Texture.InternalFormat.RGBA32F)) {
+					heightmapTexture.bind();
+					var boundHeightmap = heightmapTexture.bindImageTexture(1, 0, GL.Access.READ_ONLY, Texture.InternalFormat.RGBA32F);
+					colormapTexture.bind();
+					var boundColormap = colormapTexture.bindImageTexture(2, 0, GL.Access.READ_ONLY, Texture.InternalFormat.RGBA32F);
+					var dimensions = this.window.getFramebufferSize();
+					this.voxelSpaceComputeShader.dispatchCompute(dimensions.width(), 1, 1);
+					GL.get().memoryBarrier(GL.GL42.SHADER_IMAGE_ACCESS_BARRIER_BIT);
+					boundHeightmap.close();
+					boundColormap.close();
+				}
+				Texture.unbind(TextureType.TEXTURE_2D);
+				ShaderProgram.useNone();
+
+				this.dirty--;
 			}
-			Texture.unbind(TextureType.TEXTURE_2D);
-			ShaderProgram.useNone();
 
 			//this.render();
 
-			graphics.drawScreen(outputTexture);
+			graphics.drawScreenWith(outputTexture, this.voxelSpaceShader);
 
 			GLFW.pollEvents();
 			this.window.swapBuffers();
@@ -166,6 +176,7 @@ public final class ResErrare {
 			this.running &= !this.window.shouldClose();
 		}
 
+		this.voxelSpaceComputeShader.close();
 		this.voxelSpaceShader.close();
 	}
 
@@ -189,8 +200,10 @@ public final class ResErrare {
 	public void processInput(float deltaTime) {
 		if (this.window.getKey(' ').isPressing()) {
 			this.camera.getPosition().y++;
+			this.dirty = 1;
 		} else if (this.window.getKey(340).isPressing()) {
 			this.camera.getPosition().y--;
+			this.dirty = 1;
 		}
 
 		if (this.window.getKey('W').isPressing())
@@ -205,14 +218,19 @@ public final class ResErrare {
 		if (this.window.getKey(262).isPressing()) {
 			this.yaw--;
 			this.camera.setYaw(-this.yaw);
+			this.dirty = 1;
 		} else if (this.window.getKey(263).isPressing()) {
 			this.yaw++;
 			this.camera.setYaw(-this.yaw);
+			this.dirty = 1;
 		}
-		if (this.window.getKey(264).isPressing())
+		if (this.window.getKey(264).isPressing()) {
 			this.horizon -= 5f;
-		else if (this.window.getKey(265).isPressing())
+			this.dirty = 1;
+		} else if (this.window.getKey(265).isPressing()) {
 			this.horizon += 5f;
+			this.dirty = 1;
+		}
 	}
 
 	private void processMovement(int direction, float deltaTime) {
@@ -225,6 +243,8 @@ public final class ResErrare {
 			case 3 -> camera.getPosition().sub(right.x * velocity, right.y * velocity, right.z * velocity);
 			case 4 -> camera.getPosition().add(right.x * velocity, right.y * velocity, right.z * velocity);
 		}
+
+		this.dirty = 1;
 	}
 
 	public static void terminate() {
